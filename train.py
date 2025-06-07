@@ -1,5 +1,5 @@
 import torch
-from swin_transformer_3d import SwinTransformer
+from model.swin_transformer_3d import SwinTransformer
 from dataset import ModelNetDataset
 import torch.nn as nn
 from torch.utils.data import DataLoader

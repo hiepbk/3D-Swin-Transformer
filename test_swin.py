@@ -1,5 +1,5 @@
 import torch
-from swin_transformer_3d import SwinTransformer
+from model.swin_transformer_3d import SwinTransformer
 from dataset import ModelNetDataset
 
 def test_swin_transformer():
