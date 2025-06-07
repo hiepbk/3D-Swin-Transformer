@@ -54,6 +54,7 @@ ckpt/
 
 # Data
 data/
+data/**
 *.npy
 *.npz
 *.h5
