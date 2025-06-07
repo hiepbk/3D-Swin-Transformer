@@ -73,15 +73,10 @@ loss_cfg = dict(
 
 # Logging parameters
 log_cfg = dict(
-    log_dir = "logs",
-    ckpt_dir = "ckpt",
     save_freq = 1,
-    resume = False,
-    resume_path = None,
-    resume_epoch = None,
-    resume_optimizer = False,
-    resume_optimizer_path = None,
-    resume_optimizer_epoch = None,
     log_interval = 100,
     save_interval = 10000,
 )
+
+load_from = None
+resume_from = None

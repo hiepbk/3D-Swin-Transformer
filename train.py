@@ -9,6 +9,16 @@ import time
 import random
 import numpy as np
 import os
+import argparse
+from datetime import datetime
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train 3D Swin Transformer')
+    parser.add_argument('config', help='config file path')
+    parser.add_argument('--work-dir', help='the dir to save logs and models')
+    parser.add_argument('--extra-tag', default='', help='extra tag for the experiment')
+    args = parser.parse_args()
+    return args
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -107,11 +117,36 @@ class EarlyStopping:
             self.should_stop = True
             
         return self.should_stop
+    
+def merge_config(config, args):
+    # Set up work directory
+    if args.work_dir is None:
+        # Use config file name as work dir name
+        config_name = os.path.splitext(os.path.basename(args.config))[0]
+        args.work_dir = os.path.join('work_dir', config_name)
+    else:
+        args.work_dir = args.work_dir
+    # Add timestamp and extra tag to work dir
+    if args.extra_tag:
+        args.work_dir = os.path.join(args.work_dir, args.extra_tag)
+    else:
+        args.work_dir = os.path.join(args.work_dir)
+    
+    config.log_cfg.log_dir = os.path.join(args.work_dir, 'logs')
+    config.log_cfg.ckpt_dir = os.path.join(args.work_dir, 'ckpts')
+
+
+    return config
 
 def main():
+    # Parse arguments
+    args = parse_args()
+    
     # Load configuration
-    cfg = Config.from_file("config.py")
+    cfg = Config.from_file(args.config)
     config = cfg.load_config()
+    # Merge config with args
+    config = merge_config(config, args)
 
     # Set random seed for reproducibility
     set_seed(config.optimizer_cfg.seed, config.optimizer_cfg.deterministic)
@@ -119,12 +154,9 @@ def main():
     # Initialize logger and checkpoint manager
     logger = Logger(config.log_cfg.log_dir)
     checkpoint_manager = CheckpointManager(config.log_cfg.ckpt_dir)
-    
-    # Log configuration
-    logger.log_config(config._config)
-    logger.info(f"Training on device: {device}")
-    logger.info(f"Random seed set to: {config.optimizer_cfg.seed}")
-    logger.info(f"Deterministic mode: {config.optimizer_cfg.deterministic}")
+    #
+    logger.info(f"Log directory: {config.log_cfg.log_dir}")
+    logger.info(f"Checkpoint directory: {config.log_cfg.ckpt_dir}")
 
     # Create datasets and dataloaders
     train_dataset = ModelNetDataset(

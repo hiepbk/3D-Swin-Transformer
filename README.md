@@ -11,6 +11,8 @@ This project implements a Swin Transformer architecture for 3D point cloud class
 - Early stopping and model checkpointing
 - Comprehensive logging and visualization
 - Learning rate scheduling with warmup
+- Flexible configuration system
+- Organized experiment management with work directories
 
 ## Requirements
 
@@ -23,8 +25,8 @@ This project implements a Swin Transformer architecture for 3D point cloud class
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Swin-Transformer-Point-Cloud.git
-cd Swin-Transformer-Point-Cloud
+git clone https://github.com/hiepbk/3D-Swin-Transformer.git
+cd 3D-Swin-Transformer
 ```
 
 2. Create and activate a conda environment:
@@ -89,77 +91,94 @@ data/
 └── [other ModelNet40 classes]/   # Additional ModelNet40 classes
 ```
 
-### Dataset Files
-- `modelnet10_shape_names.txt`: Contains the 10 class names for ModelNet10
-- `modelnet10_train.txt`: List of training samples for ModelNet10
-- `modelnet10_test.txt`: List of test samples for ModelNet10
-- `filelist.txt`: Complete list of all point cloud files
-
-### Class Distribution
-The dataset shows significant class imbalance:
-- Most frequent: chair (889 samples)
-- Least frequent: bathtub (106 samples)
-- Average samples per class: ~399 samples
-
 ## Configuration
 
-The project uses a configuration system defined in `config.py`. Key parameters include:
+The project uses a flexible configuration system. Configuration files are stored in the `configs` directory. Each configuration file defines parameters for:
 
-### Model Architecture
+- Dataset configuration
+- Model architecture
+- Training parameters
+- Loss function
+- Logging settings
+
+Example configuration file (`configs/swin_bs8_gr64_ps4_ws8_cls10.py`):
 ```python
-model_cfg = dict(
-    grid_size = 64,
-    patch_size = 4,
-    in_chans = 6,
-    num_classes = 10,
-    embed_dim = 96,
-    depths = [2, 2, 6, 2],
-    num_heads = [3, 6, 12, 24],
-    window_size = 8
+# Training parameters
+grid_size = 64
+patch_size = 4
+window_size = 8
+num_feat = 6
+num_classes = 10
+
+# Dataset configuration
+dataset_cfg = dict(
+    root_dir = "data",
+    num_classes = num_classes,
+    num_feat = num_feat,
+    grid_size = grid_size,
+    pc_range = [-1.0,-1.0,-1.0,1.0,1.0,1.0],
+    ...
 )
-```
 
-### Training Parameters
-```python
+# Model configuration
+model_cfg = dict(
+    grid_size = grid_size,
+    patch_size = patch_size,
+    in_chans = num_feat,
+    num_classes = num_classes,
+    ...
+)
+
+# Training configuration
 optimizer_cfg = dict(
     lr = 0.0001,
     weight_decay = 0.01,
-    warmup_iterations = 500,
-    num_epochs = 30,
-    early_stopping_patience = 10
-)
-```
-
-### Loss Function
-```python
-loss_cfg = dict(
-    ce_smoothing = 0.1,
-    focal_alpha = 0.25,
-    focal_gamma = 2.0,
-    focal_weight = 0.1
+    ...
 )
 ```
 
 ## Training
 
-To train the model:
+To train the model, use the following command:
 
 ```bash
-python train.py
+python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py [options]
 ```
 
-The training process includes:
-- Learning rate warmup (500 iterations)
-- Class-balanced training with weights
-- Early stopping (patience=10)
-- Model checkpointing
-- Comprehensive logging
+### Command Line Arguments
 
-### Monitoring Training
+- `config`: Path to the configuration file (required)
+- `--work-dir`: Directory to save logs and models (optional)
+- `--extra-tag`: Extra tag for the experiment (optional)
 
-View training progress using TensorBoard:
+### Examples
+
 ```bash
-tensorboard --logdir logs
+# Basic training with default work directory
+python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py
+
+# Training with custom work directory
+python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py 
+
+# Training with experiment tag
+python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py --extra-tag experiment1
+```
+
+### Output Structure
+
+The training outputs are organized as follows:
+```
+work_dirs/
+└── config_name/
+    └── [extra_tag]/
+        └── YYYYMMDD_HHMMSS/
+            ├── logs/
+            │   ├── events.out.tfevents.*
+            │   └── training.log
+            └── ckpts/
+                ├── latest.pth
+                ├── epoch_*.pth
+                └── best.pth
 ```
 
 ## Model Architecture
@@ -179,8 +198,8 @@ Key components:
 ## Logging and Visualization
 
 Training progress is logged to:
-- TensorBoard logs in `logs/`
-- Checkpoints in `ckpt/`
+- TensorBoard logs in `{work_dir}/logs/`
+- Checkpoints in `{work_dir}/ckpts/`
 - Training metrics in JSON format
 
 Metrics tracked:

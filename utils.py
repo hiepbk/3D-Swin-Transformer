@@ -99,7 +99,30 @@ class Config:
             bool: True if key exists, False otherwise
         """
         return key in self._config
-    
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        """Set a configuration value using dot notation
+        
+        Args:
+            key (str): Configuration key (can be nested using dots, e.g., 'log_cfg.log_dir')
+            value (Any): Value to set
+        """
+        if key == '_config':
+            super().__setattr__(key, value)
+            return
+            
+        keys = key.split('.')
+        current = self._config
+        
+        # Navigate through nested dictionaries
+        for i, k in enumerate(keys[:-1]):
+            if k not in current:
+                current[k] = {}
+            current = current[k]
+            
+        # Set the final value
+        current[keys[-1]] = value
+
 
 class Logger:
     """Logger class for training logs and metrics"""

@@ -64,6 +64,7 @@ data/**
 outputs/
 results/
 predictions/
+work_dir/
 
 # Temporary files
 *.tmp
