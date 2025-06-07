@@ -1,10 +1,10 @@
 import torch
 from model.swin_transformer_3d import SwinTransformer
-from dataset import ModelNetDataset
+from deeplib.datasets.modelnet_dataset import ModelNetDataset
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from utils import Config, Logger, CheckpointManager
-from metrics import LabelSmoothingCrossEntropy, FocalLoss, ClassificationMetrics
+from deeplib.utils.utils import Config, Logger, CheckpointManager
+from deeplib.evaluation.metrics import LabelSmoothingCrossEntropy, FocalLoss, ClassificationMetrics
 import time
 import random
 import numpy as np

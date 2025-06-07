@@ -1,6 +1,6 @@
 import torch
 from model.swin_transformer_3d import SwinTransformer
-from dataset import ModelNetDataset
+from deeplib.datasets.modelnet_dataset import ModelNetDataset
 
 def test_swin_transformer():
     # # Create sequential test images
