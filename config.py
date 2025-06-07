@@ -44,9 +44,9 @@ model_cfg = dict(
         window_size = window_size,
         mlp_ratio = 4.,
         qkv_bias = True,
-        drop_rate = 0.,
-        attn_drop_rate = 0.,
-        drop_path_rate = 0.
+        drop_rate = 0.1,
+        attn_drop_rate = 0.1,
+        drop_path_rate = 0.1
 )
 
 optimizer_cfg = dict(

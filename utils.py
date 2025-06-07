@@ -369,7 +369,7 @@ class CheckpointManager:
         
         # Save best checkpoint if applicable
         if is_best:
-            best_path = os.path.join(self.ckpt_dir, f'best_epoch_{epoch}.pth')
+            best_path = os.path.join(self.ckpt_dir, 'best.pth')
             torch.save(checkpoint, best_path)
             
     def load_checkpoint(self,

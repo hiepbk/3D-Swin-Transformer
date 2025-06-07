@@ -45,7 +45,14 @@ pip install -r requirements.txt
 
 ## Dataset
 
-The project uses the ModelNet10 dataset, which contains 10 categories of 3D CAD models. The dataset is organized as follows:
+The project uses the ModelNet10 dataset, which contains 10 categories of 3D CAD models. You can download the dataset from the following link:
+
+[Download ModelNet10 Dataset](https://shapenet.cs.stanford.edu/media/modelnet10.zip)
+
+After downloading:
+1. Extract the zip file
+2. Place the extracted folder in the `data` directory of this project
+3. The data structure should look like this:
 
 ### ModelNet10 Classes
 - bathtub (106 samples)
