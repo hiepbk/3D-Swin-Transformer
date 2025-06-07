@@ -5,35 +5,37 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import open3d as o3d
 from collections import defaultdict
+from .base_dataset import BaseDataset
 
-
-class ModelNetDataset(Dataset):
-    def __init__(self, root_dir='./data', 
-                 split="train", 
-                 num_classes=10, 
-                 num_feat=6,
-                 grid_size=80,
-                 pc_range=[-1.0,-1.0,-1.0,1.0,1.0,1.0]):
-        self.root_dir = root_dir
-
-        self.num_classes = num_classes
-        self.num_feat = num_feat
+class ModelNetDataset(BaseDataset):
+    def __init__(self, dataset_cfg, split, transforms=None):
+        super().__init__(dataset_cfg, transforms)
+        self.root_dir = dataset_cfg.data_root
         self.split = split
-        self.grid_size = grid_size
-        self.voxel_size = (max(pc_range) - min(pc_range)) / grid_size
-        self.pc_range = np.array(pc_range)
+        self.num_classes = dataset_cfg.num_classes
+        self.num_feat = dataset_cfg.num_feat
+        self.grid_size = dataset_cfg.grid_size
+        self.pc_range = np.array(dataset_cfg.pc_range)  # Convert to numpy array
+        self.label_mode = dataset_cfg.label_mode
+        self.voxel_size = (max(self.pc_range) - min(self.pc_range)) / self.grid_size
 
         # Load class names
-        self.classes = self.read_txt(os.path.join(root_dir, f'modelnet{num_classes}_shape_names.txt'))
-        if len(self.classes) != num_classes:
-            raise ValueError(f"Number of classes in file ({len(self.classes)}) doesn't match num_classes ({num_classes})")
-        
+        self.classes = self.read_txt(os.path.join(self.root_dir, f'modelnet{self.num_classes}_shape_names.txt'))
+
         # Load split data
-        self.train_paths, self.train_labels = self.get_split_path('train')
-        self.test_paths, self.test_labels = self.get_split_path('test')
+        self.train_paths, self.train_labels, self.test_paths, self.test_labels = self.get_annotations()
         
-        # Validate labels
-        self._validate_labels()
+        if len(self.classes) != self.num_classes:
+            raise ValueError(f"Number of classes in file ({len(self.classes)}) doesn't match num_classes ({self.num_classes})")
+        
+        # # Validate labels
+        # self._validate_labels()
+
+    def get_annotations(self):
+        # Load split data
+        train_paths, train_labels = self.get_split_path('train')
+        test_paths, test_labels = self.get_split_path('test')
+        return train_paths, train_labels, test_paths, test_labels
         
     def _validate_labels(self):
         """Validate that all labels are within the correct range"""
@@ -91,41 +93,21 @@ class ModelNetDataset(Dataset):
         if pc.shape[1] > 3:
             pc[:, 3:] = pc[:, 3:] / (np.linalg.norm(pc[:, 3:], axis=1, keepdims=True) + 1e-8)
         
-        voxel_grid = self.mean_grid_voxelize(pc)
+        # Apply transforms
+        if self.transforms is not None:
+            for t in self.transforms:
+                pc = t(pc)
         
         # Convert to torch tensors
-        torch_voxel_grid = torch.from_numpy(voxel_grid).float().permute(3, 0, 1, 2)
+        torch_voxel_grid = torch.from_numpy(pc).float().permute(3, 0, 1, 2)
         torch_label = torch.tensor(label, dtype=torch.long)  # Use long dtype for classification labels
         
-        return torch_voxel_grid, torch_label
-    
-    
-    def mean_grid_voxelize(self, pc):
-        xyz = pc[:, :3]
-        
-        # Calculate voxel coordinates
-        voxel_coords = (xyz - self.pc_range[:3]) / self.voxel_size
-        voxel_coords = np.floor(voxel_coords).astype(int)
-        
-        # Clip coordinates to ensure they stay within grid bounds
-        voxel_coords = np.clip(voxel_coords, 0, self.grid_size - 1)
-        voxel_coords = voxel_coords.reshape(-1, 3)
-
-        # Group points by voxel
-        voxel_dict = defaultdict(list)
-        for i in range(len(pc)):
-            key = tuple(voxel_coords[i])
-            voxel_dict[key].append(pc[i])
-
-        # Initialize voxel grid
-        voxel_grid = np.zeros((self.grid_size, self.grid_size, self.grid_size, pc.shape[1]))
-
-        # Fill voxel grid for non-empty voxels
-        for coords, points in voxel_dict.items():
-            if all(0 <= c < self.grid_size for c in coords):  # Double check bounds
-                voxel_grid[coords] = np.mean(points, axis=0)
-    
-        return voxel_grid  # (grid_size, grid_size, grid_size, num_feat)
+        # Return as dictionary
+        return {
+            'tensor_data': torch_voxel_grid,
+            'gt_label': torch_label,
+            'pc_path': pc_path,
+        }
     
 
     def analyze_dataset(self):

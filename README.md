@@ -19,6 +19,7 @@ This project implements a Swin Transformer architecture for 3D point cloud class
 - Python 3.8+
 - CUDA 11.7+ (for GPU acceleration)
 - PyTorch 1.13.1+ with CUDA support
+- Cython (required for pycocotools)
 - Other dependencies listed in `requirements.txt`
 
 ## Installation
@@ -40,9 +41,19 @@ conda activate swin
 conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7 -c pytorch -c nvidia
 ```
 
-4. Install other dependencies:
+4. Install Cython (required for pycocotools):
+```bash
+conda install -y cython
+```
+
+5. Install other dependencies:
 ```bash
 pip install -r requirements.txt
+```
+
+6. Install deeplib in development mode:
+```bash
+python setup.py develop
 ```
 
 ## Dataset
@@ -142,7 +153,7 @@ optimizer_cfg = dict(
 To train the model, use the following command:
 
 ```bash
-python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py [options]
+python tools/train.py/configs/swin_bs8_gr64_ps4_ws8_cls10.py [options]
 ```
 
 ### Command Line Arguments
@@ -155,13 +166,12 @@ python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py [options]
 
 ```bash
 # Basic training with default work directory
-python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py
-
+python tools/train.py configs/classswin_bs8_gr64_ps4_ws8_cls10.py
 # Training with custom work directory
-python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py 
+python tools/train.py deeplib/configs/swin_bs8_gr64_ps4_ws8_cls10.py --work-dir work_dirs/custom
 
 # Training with experiment tag
-python train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py --extra-tag experiment1
+python tools/train.py deeplib/configs/swin_bs8_gr64_ps4_ws8_cls10.py --extra-tag experiment1
 ```
 
 ### Output Structure

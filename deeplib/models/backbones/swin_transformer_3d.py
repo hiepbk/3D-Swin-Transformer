@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+import torchvision.models as models
+
+# Import registry after it's defined
+from .build import BACKBONE_REGISTRY
 
 def drop_path(x, drop_prob: float = 0., training: bool = False):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
@@ -369,15 +372,30 @@ class SwinTransformerBlock(nn.Module):
 
         return x
 
-class SwinTransformer(nn.Module):
-    """Swin Transformer backbone with simple classification head"""
-    def __init__(self, grid_size=80, patch_size=2, in_chans=3, num_classes=1000,
-                 embed_dim=96, depths=[2, 2, 6, 2], num_heads=[3, 6, 12, 24],
-                 window_size=7, mlp_ratio=4., qkv_bias=True, drop_rate=0., attn_drop_rate=0.,
-                 drop_path_rate=0.1, norm_layer=nn.LayerNorm, ape=False, patch_norm=True):
+@BACKBONE_REGISTRY.register_module()
+class SwinTransformer3D(nn.Module):
+    """Swin Transformer backbone for 3D point cloud processing"""
+    def __init__(self, cfg):
         super().__init__()
         
-        self.num_classes = num_classes
+        # Get parameters from config
+        backbone_cfg = cfg.model.backbone
+        grid_size = backbone_cfg.grid_size
+        patch_size = backbone_cfg.patch_size
+        in_chans = backbone_cfg.in_chans
+        embed_dim = backbone_cfg.embed_dim
+        depths = backbone_cfg.depths
+        num_heads = backbone_cfg.num_heads
+        window_size = backbone_cfg.window_size
+        mlp_ratio = backbone_cfg.mlp_ratio
+        qkv_bias = backbone_cfg.qkv_bias
+        drop_rate = backbone_cfg.drop_rate
+        attn_drop_rate = backbone_cfg.attn_drop_rate
+        drop_path_rate = backbone_cfg.drop_path_rate
+        norm_layer = nn.LayerNorm
+        ape = backbone_cfg.ape
+        patch_norm = backbone_cfg.patch_norm
+        
         self.num_layers = len(depths)
         self.embed_dim = embed_dim
         self.ape = ape
@@ -423,16 +441,6 @@ class SwinTransformer(nn.Module):
             self.layers.append(layer)
 
         self.norm = norm_layer(self.num_features)
-        
-        # Simple classification head
-        self.head = nn.Sequential(
-            nn.Linear(self.num_features, self.num_features),
-            nn.LayerNorm(self.num_features),
-            nn.GELU(),
-            nn.Dropout(drop_rate),
-            nn.Linear(self.num_features, num_classes)
-        )
-
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
@@ -444,7 +452,7 @@ class SwinTransformer(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward_features(self, x):
+    def forward(self, x):
         x = self.patch_embed(x)
         if self.ape:
             x = x + self.absolute_pos_embed
@@ -454,15 +462,12 @@ class SwinTransformer(nn.Module):
         for layer in self.layers:
             x = layer(x)
         
+        x = self.norm(x)
+        
         # Global average pooling
         B, L, C = x.shape
         x = x.transpose(1, 2)  # B, C, L
         x = F.adaptive_avg_pool1d(x, 1)  # B, C, 1
         x = x.transpose(1, 2).squeeze(1)  # B, C
         
-        return x
-
-    def forward(self, x):
-        x = self.forward_features(x)
-        x = self.head(x)
         return x 
