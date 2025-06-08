@@ -31,14 +31,14 @@ class Trainer:
         self.model = self._build_model()
         self.model.to(self.device)
         
+        # Build dataloaders first (needed for scheduler calculation)
+        self.data_loaders = self._build_dataloader()
+        
         # Setup optimizer
         self.optimizer = self._build_optimizer()
         
-        # Setup learning rate scheduler
+        # Setup learning rate scheduler (needs dataloader length)
         self.lr_scheduler = self._build_lr_scheduler()
-        
-        # Build dataloaders
-        self.data_loaders = self._build_dataloader()
         
         # Initialize training state
         self.epoch = 0
@@ -135,11 +135,15 @@ class Trainer:
         if lr_config.policy == 'MultiStepLR': 
             main_scheduler = scheduler_class(self.optimizer, milestones=lr_config.step, gamma=lr_config.gamma)
         elif lr_config.policy == 'CosineAnnealingLR':
-            # Adjust T_max if warmup is used
-            total_iters = self.cfg.optimizer.num_epochs
+            # Calculate total iterations for cosine decay after warmup
+            total_train_iters = self.cfg.optimizer.num_epochs * len(self.data_loaders['train'])
             if hasattr(lr_config, 'warmup') and lr_config.warmup:
-                total_iters -= lr_config.warmup_iters
-            main_scheduler = scheduler_class(self.optimizer, T_max=total_iters, eta_min=lr_config.min_lr)
+                # T_max = remaining iterations after warmup
+                T_max = total_train_iters - lr_config.warmup_iters
+            else:
+                # No warmup, use all training iterations
+                T_max = total_train_iters
+            main_scheduler = scheduler_class(self.optimizer, T_max=T_max, eta_min=lr_config.min_lr)
         elif lr_config.policy == 'OneCycleLR':
             main_scheduler = scheduler_class(
                 self.optimizer, max_lr=lr_config.max_lr,

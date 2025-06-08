@@ -118,7 +118,7 @@ optimizer = dict(
 lr_config = dict(
     policy = "CosineAnnealingLR",
     warmup = "linear",
-    warmup_iters = 500,
+    warmup_iters = 300,
     warmup_ratio = 0.1,
     min_lr = 1e-6,
 )
