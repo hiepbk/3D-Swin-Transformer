@@ -4,7 +4,7 @@ This project implements a Swin Transformer architecture for 3D point cloud class
 
 ## DeepLib Framework
 
-I built **DeepLib** from scratch, a comprehensive end-to-end deep learning framework built from scratch for computer vision tasks. DeepLib is designed with modularity, extensibility, and ease of use in mind, drawing inspiration from established frameworks such as:
+I built **DeepLib**, a comprehensive end-to-end deep learning framework built from scratch for computer vision tasks. DeepLib is designed with modularity, extensibility, and ease of use in mind, drawing inspiration from established frameworks such as:
 
 - **Detectron2** (Facebook AI Research)
 - **MMDetection** (OpenMMLab)
