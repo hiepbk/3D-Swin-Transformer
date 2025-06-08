@@ -16,14 +16,27 @@ class ClsHead3D(nn.Module):
         num_classes = head_cfg.num_classes
         in_channels = head_cfg.in_channels
         dropout = head_cfg.dropout
-        
-        self.head = nn.Sequential(
+        depth = head_cfg.depth
+        mlp_blocks = []
+        for _ in range(depth):
+            mlp_blocks.append(MlpBasicBlock(in_channels, in_channels, dropout))
+        mlp_blocks.append(nn.Linear(in_channels, num_classes))
+        self.mlp_blocks = nn.Sequential(*mlp_blocks)
+
+    def forward(self, x):
+        return self.mlp_blocks(x)
+    
+
+class MlpBasicBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, dropout):
+        super().__init__()
+        self.mlp = nn.Sequential(
             nn.Linear(in_channels, in_channels),
             nn.LayerNorm(in_channels),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(in_channels, num_classes)
+            nn.Linear(in_channels, out_channels),
         )
         
     def forward(self, x):
-        return self.head(x) 
+        return self.mlp(x)

@@ -197,7 +197,7 @@ optimizer_cfg = dict(
 To train the model, use the following command:
 
 ```bash
-python tools/train.py/configs/swin_bs8_gr64_ps4_ws8_cls10.py [options]
+python tools/train.py/configs/swin_bs16_gr64_ps4_ws8_cls10.py [options]
 ```
 
 ### Command Line Arguments
@@ -210,12 +210,14 @@ python tools/train.py/configs/swin_bs8_gr64_ps4_ws8_cls10.py [options]
 
 ```bash
 # Basic training with default work directory
-python tools/train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py
-# Training with custom work directory
-python tools/train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py --work-dir work_dirs/custom
+python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls10.py
 
 # Training with experiment tag
-python tools/train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py --extra-tag experiment1
+python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls10.py --extra-tag experiment1
+
+python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls40.py --extra-tag experiment1
+
+
 ```
 
 ### Output Structure

@@ -84,7 +84,8 @@ model = dict(
         name = "ClsHead3D",
         num_classes = num_classes,
         in_channels = 768,
-        dropout = 0.1
+        dropout = 0.3,
+        depth = 3
     ),
     loss = [
         # dict(
@@ -118,7 +119,7 @@ optimizer = dict(
 lr_config = dict(
     policy = "CosineAnnealingLR",
     warmup = "linear",
-    warmup_iters = 300,
+    warmup_iters = 200,
     warmup_ratio = 0.1,
     min_lr = 1e-6,
 )
