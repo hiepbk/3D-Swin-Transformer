@@ -1,7 +1,5 @@
 #import Regesitry
-from deeplib.utils.registry import Registry
-
-NECK_REGISTRY = Registry('neck')
+from deeplib.utils.registry import NECK_REGISTRY
 
 def build_neck(cfg):
     """Build neck from config."""

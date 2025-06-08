@@ -10,37 +10,7 @@ from torch.utils.data import DataLoader
 from deeplib.core.classification_metric import ClassificationMetric
 from deeplib.core.hooks import LoggerHook
 from deeplib.utils.registry import HOOK_REGISTRY
-
-class WarmupScheduler(torch.optim.lr_scheduler._LRScheduler):
-    """Warmup scheduler wrapper for any PyTorch scheduler."""
-    def __init__(self, optimizer, warmup_iters, warmup_ratio, scheduler):
-        self.warmup_iters = warmup_iters
-        self.warmup_ratio = warmup_ratio
-        self.scheduler = scheduler
-        super().__init__(optimizer)
-
-    def get_lr(self):
-        if self.last_epoch < self.warmup_iters:
-            # Linear warmup
-            alpha = self.last_epoch / self.warmup_iters
-            return [base_lr * (self.warmup_ratio + (1 - self.warmup_ratio) * alpha) 
-                   for base_lr in self.base_lrs]
-        return self.scheduler.get_lr()
-
-    def step(self, epoch=None):
-        if self.last_epoch < self.warmup_iters:
-            super().step(epoch)
-        else:
-            self.scheduler.step(epoch)
-
-    def state_dict(self):
-        state_dict = super().state_dict()
-        state_dict['scheduler'] = self.scheduler.state_dict()
-        return state_dict
-
-    def load_state_dict(self, state_dict):
-        self.scheduler.load_state_dict(state_dict.pop('scheduler'))
-        super().load_state_dict(state_dict)
+from torch.optim.lr_scheduler import SequentialLR, LinearLR
 
 class Trainer:
     """
@@ -143,39 +113,50 @@ class Trainer:
     
     def _build_lr_scheduler(self):
         """Build learning rate scheduler from config."""
+        
+        
         lr_config = self.cfg.lr_config
         
+        # Get the main scheduler class
         try:
             scheduler_class = getattr(torch.optim.lr_scheduler, lr_config.policy)
         except AttributeError:
             raise ValueError(f"Unsupported lr policy: {lr_config.policy}")
-            
+        
+        # Build main scheduler based on policy
         if lr_config.policy == 'MultiStepLR':
-            lr_scheduler = scheduler_class(
-                self.optimizer,
-                milestones=lr_config.step,
-                gamma=lr_config.gamma
-            )
+            main_scheduler = scheduler_class(self.optimizer, milestones=lr_config.step, gamma=lr_config.gamma)
         elif lr_config.policy == 'CosineAnnealingLR':
-            lr_scheduler = scheduler_class(
-                self.optimizer,
-                T_max=self.cfg.optimizer.num_epochs,
-                eta_min=lr_config.min_lr
-            )
+            # Adjust T_max if warmup is used
+            total_iters = self.cfg.optimizer.num_epochs
+            if hasattr(lr_config, 'warmup') and lr_config.warmup:
+                total_iters -= lr_config.warmup_iters
+            main_scheduler = scheduler_class(self.optimizer, T_max=total_iters, eta_min=lr_config.min_lr)
         elif lr_config.policy == 'OneCycleLR':
-            # Implement OneCycleLR if needed
-            pass
-            
+            main_scheduler = scheduler_class(
+                self.optimizer, max_lr=lr_config.max_lr,
+                total_steps=self.cfg.optimizer.num_epochs * len(self.data_loaders['train']),
+                pct_start=lr_config.pct_start, anneal_strategy=lr_config.anneal_strategy)
+        elif lr_config.policy == 'LinearLR':
+            main_scheduler = scheduler_class(
+                self.optimizer, start_factor=lr_config.start_factor,
+                end_factor=lr_config.end_factor, total_iters=lr_config.total_iters)
+        else:
+            main_scheduler = scheduler_class(self.optimizer)
+        
         # Add warmup if specified
         if hasattr(lr_config, 'warmup') and lr_config.warmup:
-            lr_scheduler = WarmupScheduler(
-                self.optimizer,
-                warmup_iters=lr_config.warmup_iters,
-                warmup_ratio=lr_config.warmup_ratio,
-                scheduler=lr_scheduler
-            )
-            
-        return lr_scheduler
+            if lr_config.warmup == 'linear':
+                warmup_scheduler = LinearLR(
+                    self.optimizer, start_factor=lr_config.warmup_ratio,
+                    end_factor=1.0, total_iters=lr_config.warmup_iters)
+                return SequentialLR(
+                    self.optimizer, schedulers=[warmup_scheduler, main_scheduler],
+                    milestones=[lr_config.warmup_iters])
+            else:
+                raise ValueError(f"Unsupported warmup type: {lr_config.warmup}")
+        
+        return main_scheduler
     
     def _resume_from_checkpoint(self, checkpoint_path):
         """Resume training from checkpoint."""
@@ -233,26 +214,30 @@ class Trainer:
         for batch_data in train_loader:
             # Forward pass
             self.optimizer.zero_grad()
-            # loss should be a dict of loss components
-            loss = self.model(batch_data, istrain=True)
-
+            # loss is now a dict of loss components from ClassifyLoss
+            losses = self.model(batch_data, istrain=True)
             
-            # Backward pass and optimize
-            loss.backward()
+            # Extract the total loss tensor for backpropagation
+            losses.get('Loss').backward()
             
             if hasattr(self.cfg, 'grad_clip'):
                 clip_grad_norm_(self.model.parameters(), **self.cfg.grad_clip)
             
             self.optimizer.step()
             
-            # Update metrics
-            batch_metrics = {'loss': loss.item()}
-            total_loss += loss.item()
+            # Update metrics - convert tensor values to floats for logging
+            batch_metrics = {}
+            for k, v in losses.items():
+                if torch.is_tensor(v):
+                    batch_metrics[k] = v.item()
+                else:
+                    batch_metrics[k] = v
+            
+            total_loss += batch_metrics['Loss']
             
             # Call after_train_iter hooks
             for hook in self.hooks:
                 if hasattr(hook, 'after_train_iter'):
-                    # print(f"Calling after_train_iter hook: {hook}")
                     hook.after_train_iter(self, batch_metrics)
             
             self.iter += 1
@@ -308,7 +293,7 @@ class Trainer:
             hook_type = hook_cfg.pop('type')
             # Only pass work_dir to LoggerHook and CheckpointHook
             if hook_type in ['LoggerHook', 'CheckpointHook']:
-                hook_cfg['work_dir'] = self.cfg.work_dir
+                hook_cfg.update(work_dir=self.cfg.work_dir)
             hook = HOOK_REGISTRY.get(hook_type)(**hook_cfg)
             hooks.append(hook)
         return hooks

@@ -1,6 +1,5 @@
-from deeplib.utils.registry import Registry
+from deeplib.utils.registry import ARCHITECTURE_REGISTRY
 
-ARCHITECTURE_REGISTRY = Registry('architecture')
 
 def build_architecture(cfg):
     """Build architecture from config."""

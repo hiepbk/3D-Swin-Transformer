@@ -4,11 +4,11 @@ from deeplib.models.backbones.build import build_backbone
 from deeplib.models.necks.build import build_neck
 from deeplib.models.heads.build import build_head
 from deeplib.models.losses.build import build_loss
+from deeplib.utils.registry import ARCHITECTURE_REGISTRY
 import torch
-from .build import ARCHITECTURE_REGISTRY
 
 @ARCHITECTURE_REGISTRY.register_module()
-class ImageClassifier(nn.Module):
+class Classifier(nn.Module):
     """
     Basic image classifier architecture with backbone, neck, and head.
     
@@ -32,8 +32,8 @@ class ImageClassifier(nn.Module):
         # Build head
         self.head = build_head(cfg)
         
-        # Build loss
-        self.loss_func = build_loss(cfg)
+        # Build loss (dict of loss functions)
+        self.loss = build_loss(cfg)
         
         # Initialize weights
         self.init_weights(pretrained)
@@ -60,8 +60,7 @@ class ImageClassifier(nn.Module):
         x = self.extract_feat(img)
         cls_score = self.head(x)
         
-        # compute loss
-        loss = self.loss_func(cls_score, label)
+        loss = self.loss(cls_score, label)
         
         return loss
     
@@ -74,7 +73,7 @@ class ImageClassifier(nn.Module):
         pred = F.softmax(cls_score, dim=1)
 
         #compute loss
-        loss = self.loss_func(cls_score, batch_data['gt_label'])
+        loss = self.loss(cls_score, batch_data['gt_label'])
         return pred, loss
     
     def forward(self, batch_data, istrain=True):

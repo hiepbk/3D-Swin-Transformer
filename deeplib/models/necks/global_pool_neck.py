@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .build import NECK_REGISTRY
+from deeplib.utils.registry import NECK_REGISTRY
 
 @NECK_REGISTRY.register_module()
 class GlobalPoolNeck(nn.Module):

@@ -47,7 +47,7 @@ dataset = dict(
 )
 
 model = dict(
-    name = "ImageClassifier",
+    name = "Classifier",
     backbone = dict(
         name = "SwinTransformer3D",
         grid_size = grid_size,
@@ -74,16 +74,28 @@ model = dict(
         in_channels = 768,
         dropout = 0.1
     ),
-    loss = dict(
-        name = "CrossEntropyLoss",
-        weight = 1.0
-    )
+    loss = [
+        dict(
+            name = "CrossEntropyLoss",
+            loss_weight = 1.0,
+            class_weight = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            label_mode = "single"
+            ),
+        dict(
+            name = "FocalLoss",
+            loss_weight = 1.0,
+            alpha = 0.25,
+            gamma = 2.0,
+            reduction = "mean",
+            label_mode = "single"
+        )
+        ]
 )
 
 optimizer = dict(
-    name = "Adam",
+    name = "AdamW",
     lr = 0.0001,
-    weight_decay = 0.01,
+    weight_decay = 0.05,
     num_epochs = 30,
     seed = 42,
     deterministic = True,
@@ -94,10 +106,9 @@ optimizer = dict(
 lr_config = dict(
     policy = "CosineAnnealingLR",
     warmup = "linear",
-    warmup_iters = 500,
-    warmup_ratio = 0.001,
+    warmup_iters = 300,
+    warmup_ratio = 0.1,
     min_lr = 1e-6,
-    by_epoch = True
 )
 
 load_from = None

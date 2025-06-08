@@ -166,12 +166,12 @@ python tools/train.py/configs/swin_bs8_gr64_ps4_ws8_cls10.py [options]
 
 ```bash
 # Basic training with default work directory
-python tools/train.py configs/classswin_bs8_gr64_ps4_ws8_cls10.py
+python tools/train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py
 # Training with custom work directory
-python tools/train.py deeplib/configs/swin_bs8_gr64_ps4_ws8_cls10.py --work-dir work_dirs/custom
+python tools/train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py --work-dir work_dirs/custom
 
 # Training with experiment tag
-python tools/train.py deeplib/configs/swin_bs8_gr64_ps4_ws8_cls10.py --extra-tag experiment1
+python tools/train.py configs/swin_bs8_gr64_ps4_ws8_cls10.py --extra-tag experiment1
 ```
 
 ### Output Structure

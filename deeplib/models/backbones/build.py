@@ -1,8 +1,5 @@
 #import Regesitry
-from deeplib.utils.registry import Registry
-
-# Create registry
-BACKBONE_REGISTRY = Registry('backbone')
+from deeplib.utils.registry import BACKBONE_REGISTRY
 
 def build_backbone(cfg):
     """Build backbone from config."""

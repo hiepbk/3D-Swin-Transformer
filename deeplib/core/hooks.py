@@ -61,7 +61,7 @@ class LoggerHook(Hook):
         self.logger.info('Start training')
         # print model network structure
         self.logger.info(f'Model network structure: {trainer.model}')
-
+    
     def after_train_iter(self, trainer, batch_metrics):
         if (trainer.iter + 1) % self.log_freq == 0:
             # Get current learning rate
@@ -73,7 +73,7 @@ class LoggerHook(Hook):
                 f"Iter: [{trainer.iter+1}/{len(trainer.data_loaders['train'])}] "
                 f"LR: {current_lr:.6f} "
             )
-            
+    
             # Add all loss components to log message and tensorboard
             for k, v in batch_metrics.items():
                 if isinstance(v, (int, float)):
@@ -82,7 +82,7 @@ class LoggerHook(Hook):
             
             self.logger.info(log_msg)
             self.writer.add_scalar('train/learning_rate', current_lr, trainer.iter)
-
+    
     def after_train_epoch(self, trainer, metrics):
         self.logger.info(f'Epoch {trainer.epoch + 1} training completed')
         
@@ -100,9 +100,9 @@ class LoggerHook(Hook):
         for name, param in trainer.model.named_parameters():
             if param.requires_grad:
                 self.writer.add_histogram(f'parameters/{name}', param.data.cpu().numpy(), trainer.epoch)
-                if param.grad is not None:
+            if param.grad is not None:
                     self.writer.add_histogram(f'gradients/{name}', param.grad.cpu().numpy(), trainer.epoch)
-
+    
     def after_val_epoch(self, trainer, metrics):
         self.logger.info(f'Epoch {trainer.epoch + 1} validation completed')
         
@@ -115,10 +115,10 @@ class LoggerHook(Hook):
             if isinstance(v, (int, float)):
                 self.logger.info(f'{k}: {v:.4f}')
                 self.writer.add_scalar(f'val/{k}', v, trainer.epoch)
-
+    
     def after_run(self, trainer):
         self.logger.info('Training completed')
-        self.writer.close()
+        self.writer.close() 
 
 @HOOK_REGISTRY.register_module()
 class CheckpointHook(Hook):
@@ -146,9 +146,19 @@ class CheckpointHook(Hook):
 
 @HOOK_REGISTRY.register_module()
 class LRSchedulerHook(Hook):
-    def after_train_epoch(self, trainer, metrics):
+    def after_train_iter(self, trainer, batch_metrics):
+        # Step scheduler after each iteration if using warmup or OneCycleLR
         if trainer.lr_scheduler is not None:
-            trainer.lr_scheduler.step()
+            scheduler_name = trainer.lr_scheduler.__class__.__name__
+            if scheduler_name in ['SequentialLR', 'OneCycleLR']:
+                trainer.lr_scheduler.step()
+    
+    def after_train_epoch(self, trainer, metrics):
+        # Step scheduler after each epoch for other schedulers
+        if trainer.lr_scheduler is not None:
+            scheduler_name = trainer.lr_scheduler.__class__.__name__
+            if scheduler_name not in ['SequentialLR', 'OneCycleLR']:
+                trainer.lr_scheduler.step()
 
 @HOOK_REGISTRY.register_module()
 class OptimizerHook(Hook):

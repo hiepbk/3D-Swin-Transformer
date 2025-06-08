@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision.models as models
 
 # Import registry after it's defined
-from .build import BACKBONE_REGISTRY
+from deeplib.utils.registry import BACKBONE_REGISTRY
 
 def drop_path(x, drop_prob: float = 0., training: bool = False):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""

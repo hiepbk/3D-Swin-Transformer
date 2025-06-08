@@ -3,7 +3,7 @@ import torch.nn as nn
 import torchvision.models as models
 
 # Import registry after it's defined
-from .build import BACKBONE_REGISTRY
+from deeplib.utils.registry import BACKBONE_REGISTRY
 
 @BACKBONE_REGISTRY.register_module()
 class ResNet(nn.Module):    

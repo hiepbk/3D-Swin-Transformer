@@ -1,4 +1,5 @@
 import os
+import sys
 import importlib.util
 from collections import OrderedDict
 
@@ -11,8 +12,20 @@ class Config:
             "Either cfg_file or cfg_dict must be specified."
         
         if cfg_file is not None:
-            # Load the Python file as a module
-            spec = importlib.util.spec_from_file_location("config", cfg_file)
+            # Handle file path
+            if not os.path.exists(cfg_file):
+                raise FileNotFoundError(f"Config file not found: {cfg_file}")
+            
+            # Get the directory containing the config file
+            cfg_dir = os.path.dirname(os.path.abspath(cfg_file))
+            if cfg_dir not in sys.path:
+                sys.path.insert(0, cfg_dir)
+            
+            # Get the module name without extension
+            module_name = os.path.splitext(os.path.basename(cfg_file))[0]
+            
+            # Load the module
+            spec = importlib.util.spec_from_file_location(module_name, cfg_file)
             self.module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self.module)
         else:

@@ -41,7 +41,14 @@ class Registry:
         return cls
 
 # Create registries
+ARCHITECTURE_REGISTRY = Registry('architecture')
+BACKBONE_REGISTRY = Registry('backbone')
+NECK_REGISTRY = Registry('neck')
+HEAD_REGISTRY = Registry('head')
+LOSS_REGISTRY = Registry('loss') 
+
 HOOK_REGISTRY = Registry('hook')
 MODEL_REGISTRY = Registry('model')
 DATASET_REGISTRY = Registry('dataset')
-TRANSFORM_REGISTRY = Registry('transform') 
+TRANSFORM_REGISTRY = Registry('transform')
+
