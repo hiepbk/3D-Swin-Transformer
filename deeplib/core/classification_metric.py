@@ -4,12 +4,13 @@ import numpy as np
 import torch
 from collections import defaultdict
 
-class ClassificationMetric:
+class ClassificationEvaluator:
     """
     Class to accumulate and calculate classification metrics.
     Supports both multi-class and multi-label scenarios.
     """
-    def __init__(self):
+    def __init__(self, class_names):
+        self.class_names = class_names
         self.reset()
     
     def reset(self):
@@ -19,10 +20,8 @@ class ClassificationMetric:
         self.true_positives = defaultdict(int)
         self.false_positives = defaultdict(int)
         self.false_negatives = defaultdict(int)
-        self.accumulated_loss = 0
-        self.num_batches = 0
         
-    def update(self, pred, target, loss=None):
+    def update(self, pred, target):
         """
         Update metrics with new predictions
         
@@ -36,9 +35,6 @@ class ClassificationMetric:
         else:  # Multi-class case
             self._update_multiclass(pred, target)
             
-        if loss is not None:
-            self.accumulated_loss += loss
-            self.num_batches += 1
     
     def _update_multiclass(self, pred, target):
         """Update metrics for multi-class scenario"""
@@ -81,10 +77,6 @@ class ClassificationMetric:
         
         # Overall accuracy
         metrics['accuracy'] = self.correct / max(self.total, 1) * 100
-        
-        # Average loss
-        if self.num_batches > 0:
-            metrics['avg_loss'] = self.accumulated_loss / self.num_batches
         
         # Initialize per-class metric accumulators
         macro_precision = 0

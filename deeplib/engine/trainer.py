@@ -7,8 +7,7 @@ from tqdm import tqdm
 from deeplib.models import build_architecture
 from deeplib.datasets import build_dataset
 from torch.utils.data import DataLoader
-from deeplib.core.classification_metric import ClassificationMetric
-from deeplib.core.hooks import LoggerHook
+from deeplib.core import ClassificationEvaluator
 from deeplib.utils.registry import HOOK_REGISTRY
 from torch.optim.lr_scheduler import SequentialLR, LinearLR
 
@@ -25,8 +24,9 @@ class Trainer:
     def __init__(self, cfg, resume_from=None):
         self.cfg = cfg
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.logger = logging.getLogger('trainer')
-        
+        # Initialize hooks
+        self.hooks = self._build_hooks()
+
         # Build model
         self.model = self._build_model()
         self.model.to(self.device)
@@ -45,10 +45,9 @@ class Trainer:
         self.iter = 0
         self.best_val_acc = 0
         
-        self.metric_calculator = ClassificationMetric()
+        self.evaluator = self._build_evaluator()
         
-        # Initialize hooks
-        self.hooks = self._build_hooks()
+        
         
         # Resume from checkpoint if specified
         if resume_from is not None:
@@ -75,7 +74,17 @@ class Trainer:
                             pin_memory=self.cfg.dataset.val.pin_memory,
                             collate_fn=val_collate_fn)
         data_loaders = {'train': train_loader, 'val': val_loader}
+
+        self.logger.info(f'Train set: {len(train_set)}')
+        self.logger.info(f'Val set: {len(val_set)}')
+        self.logger.info(f'{len(train_set.classes)} Classes: {train_set.classes}')
         return data_loaders
+    
+    def _build_evaluator(self):
+        """Build evaluator from config."""
+        class_names = self.cfg.class_names
+        evaluator = ClassificationEvaluator(class_names)
+        return evaluator
     
     def _build_model(self):
         """Build model from config."""
@@ -113,8 +122,7 @@ class Trainer:
     
     def _build_lr_scheduler(self):
         """Build learning rate scheduler from config."""
-        
-        
+
         lr_config = self.cfg.lr_config
         
         # Get the main scheduler class
@@ -206,7 +214,7 @@ class Trainer:
     def train_epoch(self):
         """Train for one epoch."""
         self.model.train()
-        self.metric_calculator.reset()
+        self.evaluator.reset()
         total_loss = 0
         
         train_loader = self.data_loaders['train']
@@ -238,7 +246,7 @@ class Trainer:
             # Call after_train_iter hooks
             for hook in self.hooks:
                 if hasattr(hook, 'after_train_iter'):
-                    hook.after_train_iter(self, batch_metrics)
+                    hook.after_train_iter(self, batch_metrics=batch_metrics)
             
             self.iter += 1
         
@@ -251,34 +259,35 @@ class Trainer:
         # Call after_train_epoch hooks
         for hook in self.hooks:
             if hasattr(hook, 'after_train_epoch'):
-                hook.after_train_epoch(self, epoch_metrics)
+                hook.after_train_epoch(self, metrics=epoch_metrics)
         
         return epoch_metrics['avg_loss']
     
-    def validate(self):
-        """Validate the model."""
+    def evaluate(self):
+        """Evaluate the model."""
+
         if 'val' not in self.data_loaders:
             self.logger.info("No validation dataloader provided. Skipping validation.")
-            return 0, 0
+            return 0
         
         self.model.eval()
-        self.metric_calculator.reset()
+        self.evaluator.reset()
         data_loader = self.data_loaders['val']
         
         with torch.no_grad():
             for i, batch_data in enumerate(data_loader):
-                pred, loss = self.model(batch_data, istrain=False)
-                self.metric_calculator.update(pred, batch_data['gt_label'], loss.item())
+                pred, _ = self.model(batch_data, istrain=False)
+                self.evaluator.update(pred, batch_data['gt_label'])
 
         # Get all metrics
-        metrics = self.metric_calculator.compute()
+        metrics = self.evaluator.compute()
         
         # Call after_val_epoch hooks
         for hook in self.hooks:
             if hasattr(hook, 'after_val_epoch'):
                 hook.after_val_epoch(self, metrics)
         
-        return metrics['avg_loss'], metrics['accuracy']
+        return metrics
     
     def call_hook(self, fn_name):
         """Call all hooks with the given function name."""
@@ -295,7 +304,12 @@ class Trainer:
             if hook_type in ['LoggerHook', 'CheckpointHook']:
                 hook_cfg.update(work_dir=self.cfg.work_dir)
             hook = HOOK_REGISTRY.get(hook_type)(**hook_cfg)
+
+            if hook_type == 'LoggerHook':
+                self.logger = hook.logger
+
             hooks.append(hook)
+
         return hooks
 
     def train(self):
@@ -305,14 +319,7 @@ class Trainer:
         for epoch in range(self.cfg.optimizer.num_epochs):
             self.epoch = epoch
             self.call_hook('before_epoch')
-            
-            train_loss = self.train_epoch()
-            
-            # Get logger hook for validation interval
-            logger_hook = next((hook for hook in self.hooks if isinstance(hook, LoggerHook)), None)
-            if logger_hook is not None and (epoch + 1) % logger_hook.val_epoch_interval == 0:
-                val_loss, val_acc = self.validate()
-            
-            self.call_hook('after_epoch')
+            self.train_epoch()
+            self.call_hook('after_train_epoch')
             
         self.call_hook('after_run') 

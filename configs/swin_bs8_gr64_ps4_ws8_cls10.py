@@ -3,15 +3,27 @@ grid_size = 64
 patch_size = 4
 window_size = 8
 num_feat = 6
-num_classes = 10
 
-train_batch_size = 8
+class_names = ["bathtub",
+               "bed",
+               "chair", 
+               "desk",
+               "dresser",
+               "monitor", 
+               "night_stand", 
+               "sofa", 
+               "table", 
+               "toilet"]
+num_classes = len(class_names)
+
+train_batch_size = 12
 val_batch_size = 1
 
 dataset = dict(
     name = "build_modelnet_dataset",
     data_root = "data",
     num_classes = num_classes,
+    class_names = class_names,
     num_feat = num_feat,
     grid_size = grid_size,
     pc_range = [-1.0,-1.0,-1.0,1.0,1.0,1.0],

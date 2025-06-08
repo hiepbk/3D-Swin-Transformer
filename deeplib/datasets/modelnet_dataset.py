@@ -19,8 +19,14 @@ class ModelNetDataset(BaseDataset):
         self.label_mode = dataset_cfg.label_mode
         self.voxel_size = (max(self.pc_range) - min(self.pc_range)) / self.grid_size
 
-        # Load class names
+        # Load class names from annotation file
         self.classes = self.read_txt(os.path.join(self.root_dir, f'modelnet{self.num_classes}_shape_names.txt'))
+
+        # if class_names is provided, use it to select classes
+        if dataset_cfg.class_names is not None:
+            selected_classes = dataset_cfg.class_names
+            self.classes = [c for c in self.classes if c in selected_classes]
+            self.num_classes = len(self.classes)
 
         # Load split data
         self.train_paths, self.train_labels, self.test_paths, self.test_labels = self.get_annotations()
@@ -66,6 +72,8 @@ class ModelNetDataset(BaseDataset):
         for split in split_lst:
             parts = split.split('_')
             class_name = '_'.join(parts[:-1])
+            if class_name not in self.classes:
+                continue
             split_path.append(os.path.join(self.root_dir, class_name, f'{split}.txt'))
             label = self.classes.index(class_name)
             split_label.append(label)

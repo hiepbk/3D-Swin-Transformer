@@ -62,7 +62,8 @@ class LoggerHook(Hook):
         # print model network structure
         self.logger.info(f'Model network structure: {trainer.model}')
     
-    def after_train_iter(self, trainer, batch_metrics):
+    def after_train_iter(self, trainer, **kwargs):
+        batch_metrics = kwargs.get('batch_metrics', {})
         if (trainer.iter + 1) % self.log_freq == 0:
             # Get current learning rate
             current_lr = trainer.optimizer.param_groups[0]['lr']
@@ -80,35 +81,16 @@ class LoggerHook(Hook):
                     log_msg += f"{k}: {v:.4f} "
                     self.writer.add_scalar(f'train/{k}', v, trainer.iter)
             
+            
+            self.writer.add_scalar('optimizer/learning_rate', current_lr, trainer.iter)
             self.logger.info(log_msg)
-            self.writer.add_scalar('train/learning_rate', current_lr, trainer.iter)
-    
-    def after_train_epoch(self, trainer, metrics):
-        self.logger.info(f'Epoch {trainer.epoch + 1} training completed')
-        
-        # Get current learning rate
-        current_lr = trainer.optimizer.param_groups[0]['lr']
-        self.logger.info(f'Learning rate: {current_lr:.6f}')
-        
-        # Log all metrics
-        for k, v in metrics.items():
-            if isinstance(v, (int, float)):
-                self.logger.info(f'{k}: {v:.4f}')
-                self.writer.add_scalar(f'train/{k}', v, trainer.epoch)
-        
-        # Add histograms of model parameters
-        for name, param in trainer.model.named_parameters():
-            if param.requires_grad:
-                self.writer.add_histogram(f'parameters/{name}', param.data.cpu().numpy(), trainer.epoch)
-            if param.grad is not None:
-                    self.writer.add_histogram(f'gradients/{name}', param.grad.cpu().numpy(), trainer.epoch)
+
+    def after_train_epoch(self, trainer, **kwargs):
+        if self.val_epoch_interval is not None and (trainer.epoch + 1) % self.val_epoch_interval == 0:
+            trainer.evaluate()
     
     def after_val_epoch(self, trainer, metrics):
         self.logger.info(f'Epoch {trainer.epoch + 1} validation completed')
-        
-        # Get current learning rate
-        current_lr = trainer.optimizer.param_groups[0]['lr']
-        self.logger.info(f'Learning rate: {current_lr:.6f}')
         
         # Log all metrics
         for k, v in metrics.items():
@@ -122,14 +104,14 @@ class LoggerHook(Hook):
 
 @HOOK_REGISTRY.register_module()
 class CheckpointHook(Hook):
-    def __init__(self, work_dir, save_dir='checkpoints', save_freq=10):
+    def __init__(self, work_dir, save_dir='ckpts', save_freq=10):
         super().__init__()
         self.work_dir = work_dir
         self.save_dir = os.path.join(work_dir, save_dir)
         self.save_freq = save_freq
         os.makedirs(self.save_dir, exist_ok=True)
 
-    def after_train_epoch(self, trainer, metrics):
+    def after_train_epoch(self, trainer, **kwargs):
         if (trainer.epoch + 1) % self.save_freq == 0:
             checkpoint = {
                 'epoch': trainer.epoch,
@@ -142,18 +124,18 @@ class CheckpointHook(Hook):
             
             save_path = os.path.join(self.save_dir, f'epoch_{trainer.epoch+1}.pth')
             torch.save(checkpoint, save_path)
-            trainer.logger.info(f'Checkpoint saved to {save_path}')
+            trainer.logger.info(f'Checkpoint saved to {save_path}') 
 
 @HOOK_REGISTRY.register_module()
 class LRSchedulerHook(Hook):
-    def after_train_iter(self, trainer, batch_metrics):
+    def after_train_iter(self, trainer, **kwargs):
         # Step scheduler after each iteration if using warmup or OneCycleLR
         if trainer.lr_scheduler is not None:
             scheduler_name = trainer.lr_scheduler.__class__.__name__
             if scheduler_name in ['SequentialLR', 'OneCycleLR']:
                 trainer.lr_scheduler.step()
     
-    def after_train_epoch(self, trainer, metrics):
+    def after_train_epoch(self, trainer, **kwargs):
         # Step scheduler after each epoch for other schedulers
         if trainer.lr_scheduler is not None:
             scheduler_name = trainer.lr_scheduler.__class__.__name__
@@ -162,7 +144,7 @@ class LRSchedulerHook(Hook):
 
 @HOOK_REGISTRY.register_module()
 class OptimizerHook(Hook):
-    def after_train_iter(self, trainer, batch_metrics):
+    def after_train_iter(self, trainer, **kwargs):
         if hasattr(trainer.cfg, 'grad_clip'):
             clip_grad_norm_(trainer.model.parameters(), **trainer.cfg.grad_clip)
 
