@@ -137,7 +137,7 @@ hooks = [
     dict(
         type='CheckpointHook',
         save_dir='ckpts',
-        save_freq=10
+        save_freq=1
     ),
     dict(type='LRSchedulerHook'),
     dict(type='OptimizerHook')

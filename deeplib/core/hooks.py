@@ -71,7 +71,7 @@ class LoggerHook(Hook):
             # Build log message with all loss components
             log_msg = (
                 f"Epoch: [{trainer.epoch+1}/{trainer.cfg.optimizer.num_epochs}] "
-                f"Iter: [{trainer.iter+1}/{len(trainer.data_loaders['train'])}] "
+                f"Iter: [{trainer.local_iter+1}/{len(trainer.data_loaders['train'])}] "
                 f"LR: {current_lr:.6f} "
             )
     
@@ -109,10 +109,24 @@ class CheckpointHook(Hook):
         self.work_dir = work_dir
         self.save_dir = os.path.join(work_dir, save_dir)
         self.save_freq = save_freq
+        self.last_epoch = 0
         os.makedirs(self.save_dir, exist_ok=True)
 
     def after_train_epoch(self, trainer, **kwargs):
         if (trainer.epoch + 1) % self.save_freq == 0:
+            if trainer.epoch > self.last_epoch:
+                self.last_epoch = trainer.epoch
+                # save the last checkpoint
+                last_checkpoint = {
+                    'epoch': trainer.epoch,
+                    'model_state_dict': trainer.model.state_dict(),
+                    'optimizer_state_dict': trainer.optimizer.state_dict(),
+                    'best_val_acc': trainer.best_val_acc
+                }
+                save_path = os.path.join(self.save_dir, f'last.pth')
+                torch.save(last_checkpoint, save_path)
+                trainer.logger.info(f'Last checkpoint saved to {save_path}') 
+
             checkpoint = {
                 'epoch': trainer.epoch,
                 'model_state_dict': trainer.model.state_dict(),
@@ -122,7 +136,7 @@ class CheckpointHook(Hook):
             if trainer.lr_scheduler is not None:
                 checkpoint['scheduler_state_dict'] = trainer.lr_scheduler.state_dict()
             
-            save_path = os.path.join(self.save_dir, f'epoch_{trainer.epoch+1}.pth')
+            save_path = os.path.join(self.save_dir, f'epoch_{trainer.epoch}.pth')
             torch.save(checkpoint, save_path)
             trainer.logger.info(f'Checkpoint saved to {save_path}') 
 

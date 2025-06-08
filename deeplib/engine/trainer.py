@@ -215,7 +215,8 @@ class Trainer:
         """Train for one epoch."""
         self.model.train()
         self.evaluator.reset()
-        total_loss = 0
+
+        self.local_iter = 0
         
         train_loader = self.data_loaders['train']
         
@@ -241,15 +242,13 @@ class Trainer:
                 else:
                     batch_metrics[k] = v
             
-            total_loss += batch_metrics['Loss']
-            
             # Call after_train_iter hooks
             for hook in self.hooks:
                 if hasattr(hook, 'after_train_iter'):
                     hook.after_train_iter(self, batch_metrics=batch_metrics)
             
             self.iter += 1
-        
+            self.local_iter += 1
     
     def evaluate(self):
         """Evaluate the model."""
