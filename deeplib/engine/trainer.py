@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from deeplib.core import ClassificationEvaluator
 from deeplib.utils.registry import HOOK_REGISTRY
 from torch.optim.lr_scheduler import SequentialLR, LinearLR
+from deeplib.utils.utils import track_progress
 
 class Trainer:
     """
@@ -21,7 +22,7 @@ class Trainer:
         data_loaders (dict): Dictionary containing 'train' and optionally 'val' dataloaders
         resume_from (str, optional): Path to checkpoint to resume from
     """
-    def __init__(self, cfg, resume_from=None):
+    def __init__(self, cfg):
         self.cfg = cfg
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Initialize hooks
@@ -44,14 +45,13 @@ class Trainer:
         self.epoch = 0
         self.iter = 0
         self.best_val_acc = 0
-        
         self.evaluator = self._build_evaluator()
         
-        
-        
+
+        print("resume from", self.cfg.resume_from)
         # Resume from checkpoint if specified
-        if resume_from is not None:
-            self._resume_from_checkpoint(resume_from)
+        if self.cfg.resume_from is not None:
+            self._resume_from_checkpoint(self.cfg.resume_from)
             
     def _build_dataloader(self):
         """Build dataloader from config."""
@@ -175,45 +175,34 @@ class Trainer:
         self.logger.info(f"Resuming from checkpoint: {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         
+        # Log available keys for debugging
+        self.logger.info(f"Checkpoint keys: {list(checkpoint.keys())}")
+        
         # Load model state
-        self.model.load_state_dict(checkpoint['model_state_dict'])
+        if 'model_state_dict' in checkpoint:
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.logger.info("Model state loaded successfully")
+        else:
+            self.logger.warning("No model_state_dict found in checkpoint")
         
         # Load optimizer state
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if 'optimizer_state_dict' in checkpoint:
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.logger.info("Optimizer state loaded successfully")
+        else:
+            self.logger.warning("No optimizer_state_dict found in checkpoint")
         
         # Load scheduler state if exists
         if 'scheduler_state_dict' in checkpoint and self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            self.logger.info("LR scheduler state loaded successfully")
         
-        # Load training state
-        self.epoch = checkpoint['epoch']
-        self.iter = checkpoint['iter']
+        # Load training state with defaults for missing keys
+        self.epoch = checkpoint.get('epoch', 0)
+        self.iter = checkpoint.get('iter', 0)
         self.best_val_acc = checkpoint.get('best_val_acc', 0)
         
-        self.logger.info(f"Resumed from epoch {self.epoch}, iteration {self.iter}")
-    
-    def _save_checkpoint(self, filename, save_optimizer=True, is_best=False):
-        """Save training checkpoint."""
-        checkpoint = {
-            'epoch': self.epoch,
-            'iter': self.iter,
-            'model_state_dict': self.model.state_dict(),
-            'best_val_acc': self.best_val_acc
-        }
-        
-        if save_optimizer:
-            checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
-            if self.lr_scheduler is not None:
-                checkpoint['scheduler_state_dict'] = self.lr_scheduler.state_dict()
-        
-        checkpoint_path = os.path.join(self.cfg.work_dir, filename)
-        torch.save(checkpoint, checkpoint_path)
-        self.logger.info(f"Checkpoint saved to {checkpoint_path}")
-        
-        if is_best:
-            best_path = os.path.join(self.cfg.work_dir, 'best_model.pth')
-            torch.save(checkpoint, best_path)
-            self.logger.info(f"Best model saved to {best_path}")
+        self.logger.info(f"Resumed from epoch {self.epoch}, iteration {self.iter}, best_val_acc {self.best_val_acc}")
     
     def train_epoch(self):
         """Train for one epoch."""
@@ -256,6 +245,7 @@ class Trainer:
     
     def evaluate(self):
         """Evaluate the model."""
+        from deeplib.utils.utils import track_progress
 
         if 'val' not in self.data_loaders:
             self.logger.info("No validation dataloader provided. Skipping validation.")
@@ -266,12 +256,9 @@ class Trainer:
         data_loader = self.data_loaders['val']
         
         with torch.no_grad():
-            for i, batch_data in enumerate(data_loader):
+            for i, batch_data in track_progress(data_loader, "Evaluating", bar_length=25):
                 pred, _ = self.model(batch_data, istrain=False)
                 self.evaluator.update(pred, batch_data['gt_label'])
-
-                # make annimation of >>>>>>, total >>> will be 100, so it is percentage of progress
-                print(f"{i}/{len(data_loader)}: {'>'*int(i/len(data_loader)*100)}", end='\r')
 
         # Get all metrics
         metrics = self.evaluator.evaluate()

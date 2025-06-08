@@ -213,7 +213,11 @@ python tools/train.py/configs/swin_bs16_gr64_ps4_ws8_cls10.py [options]
 python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls10.py
 
 # Training with experiment tag
-python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls10.py --extra-tag experiment1
+python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls10.py --resume-from work_dirs/swin_bs16_gr64_ps4_ws8_cls10/experiment2/ckpts/epoch_0.pth --extra-tag experiment2
+
+
+python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls10.py --extra-tag experiment2
+
 
 python tools/train.py configs/swin_bs16_gr64_ps4_ws8_cls40.py --extra-tag experiment1
 

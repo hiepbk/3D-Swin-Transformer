@@ -119,6 +119,7 @@ class CheckpointHook(Hook):
                 # save the last checkpoint
                 last_checkpoint = {
                     'epoch': trainer.epoch,
+                    'iter': trainer.iter,
                     'model_state_dict': trainer.model.state_dict(),
                     'optimizer_state_dict': trainer.optimizer.state_dict(),
                     'best_val_acc': trainer.best_val_acc
@@ -129,6 +130,7 @@ class CheckpointHook(Hook):
 
             checkpoint = {
                 'epoch': trainer.epoch,
+                'iter': trainer.iter,
                 'model_state_dict': trainer.model.state_dict(),
                 'optimizer_state_dict': trainer.optimizer.state_dict(),
                 'best_val_acc': trainer.best_val_acc

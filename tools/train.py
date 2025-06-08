@@ -12,7 +12,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')
     parser.add_argument('config', help='train config file path')
     parser.add_argument('--work-dir', default=None, help='the dir to save logs and models')
-    parser.add_argument('--resume-from', help='the checkpoint file to resume from')
+    parser.add_argument('--resume-from', default=None, help='the checkpoint file to resume from')
     parser.add_argument('--no-validate', action='store_true', help='whether not to evaluate the checkpoint during training')
     parser.add_argument('--seed', type=int, default=None, help='random seed')
     parser.add_argument('--deterministic', action='store_true', help='whether to set deterministic options for CUDNN backend.')
@@ -26,7 +26,7 @@ def main():
     args = parse_args()
     
     # Load config
-    cfg = Config(args.config, merge_from_args=args.cfg_options)
+    cfg = Config(args.config, merge_from_args=args)
     
     # Set work directory
     if args.work_dir is not None:
