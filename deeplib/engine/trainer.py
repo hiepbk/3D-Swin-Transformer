@@ -250,18 +250,6 @@ class Trainer:
             
             self.iter += 1
         
-        # Compute epoch metrics
-        epoch_metrics = {
-            'avg_loss': total_loss / len(train_loader),
-            'learning_rate': self.optimizer.param_groups[0]['lr']
-        }
-        
-        # Call after_train_epoch hooks
-        for hook in self.hooks:
-            if hasattr(hook, 'after_train_epoch'):
-                hook.after_train_epoch(self, metrics=epoch_metrics)
-        
-        return epoch_metrics['avg_loss']
     
     def evaluate(self):
         """Evaluate the model."""

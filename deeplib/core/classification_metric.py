@@ -75,17 +75,15 @@ class ClassificationEvaluator:
         """
         metrics = {}
         
-        # Overall accuracy
-        metrics['accuracy'] = self.correct / max(self.total, 1) * 100
-        
         # Initialize per-class metric accumulators
         macro_precision = 0
         macro_recall = 0
         macro_f1 = 0
-        num_classes = len(self.true_positives)
+        num_classes = len(self.class_names)
+        assert num_classes == len(self.true_positives), "Number of classes does not match"
         
         # Calculate per-class metrics
-        for class_idx in range(num_classes):
+        for class_idx, class_name in enumerate(self.class_names):
             tp = self.true_positives[class_idx]
             fp = self.false_positives[class_idx]
             fn = self.false_negatives[class_idx]
@@ -103,14 +101,16 @@ class ClassificationEvaluator:
             macro_f1 += f1
             
             # Store per-class metrics
-            metrics[f'class_{class_idx}_precision'] = precision * 100
-            metrics[f'class_{class_idx}_recall'] = recall * 100
-            metrics[f'class_{class_idx}_f1'] = f1 * 100
+            metrics[f'{class_name}_precision'] = precision 
+            metrics[f'{class_name}_recall'] = recall
+            metrics[f'{class_name}_f1'] = f1
         
         # Calculate macro averages
-        metrics['macro_precision'] = (macro_precision / num_classes) * 100
-        metrics['macro_recall'] = (macro_recall / num_classes) * 100
-        metrics['macro_f1'] = (macro_f1 / num_classes) * 100
+        metrics['macro_precision'] = (macro_precision / num_classes)
+        metrics['macro_recall'] = (macro_recall / num_classes)
+        metrics['macro_f1'] = (macro_f1 / num_classes)
+        # Overall accuracy
+        metrics['accuracy'] = self.correct / max(self.total, 1)
         
         return metrics
 
