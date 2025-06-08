@@ -66,7 +66,7 @@ class ClassificationEvaluator:
             self.false_positives[class_idx] += (pred_mask & ~target_mask).sum().item()
             self.false_negatives[class_idx] += (~pred_mask & target_mask).sum().item()
     
-    def compute(self):
+    def evaluate(self):
         """
         Compute all metrics
         

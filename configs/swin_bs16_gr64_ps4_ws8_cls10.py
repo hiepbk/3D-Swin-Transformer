@@ -84,8 +84,8 @@ model = dict(
         name = "ClsHead3D",
         num_classes = num_classes,
         in_channels = 768,
-        dropout = 0.3,
-        depth = 3
+        dropout = 0.1,
+        depth = 2
     ),
     loss = [
         # dict(

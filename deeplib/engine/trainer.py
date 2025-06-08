@@ -270,8 +270,11 @@ class Trainer:
                 pred, _ = self.model(batch_data, istrain=False)
                 self.evaluator.update(pred, batch_data['gt_label'])
 
+                # make annimation of >>>>>>, total >>> will be 100, so it is percentage of progress
+                print(f"{i}/{len(data_loader)}: {'>'*int(i/len(data_loader)*100)}", end='\r')
+
         # Get all metrics
-        metrics = self.evaluator.compute()
+        metrics = self.evaluator.evaluate()
         
         # Call after_val_epoch hooks
         for hook in self.hooks:
