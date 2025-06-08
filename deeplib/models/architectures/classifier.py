@@ -58,7 +58,7 @@ class Classifier(nn.Module):
         label = batch_data['gt_label'].to(self.device)
         
         x = self.extract_feat(img)
-        cls_score = self.head(x)
+        cls_score = self.head(x) # (B, C)
         
         loss = self.loss(cls_score, label)
         
@@ -69,7 +69,7 @@ class Classifier(nn.Module):
         batch_data['tensor_data'] = batch_data['tensor_data'].to(self.device)
         batch_data['gt_label'] = batch_data['gt_label'].to(self.device)
         x = self.extract_feat(batch_data['tensor_data'])
-        cls_score = self.head(x)
+        cls_score = self.head(x) # (B, C)
         pred = F.softmax(cls_score, dim=1)
 
         #compute loss

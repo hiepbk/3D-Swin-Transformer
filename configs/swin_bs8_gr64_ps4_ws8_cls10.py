@@ -87,16 +87,16 @@ model = dict(
         dropout = 0.1
     ),
     loss = [
-        dict(
-            name = "CrossEntropyLoss",
-            loss_weight = 1.0,
-            class_weight = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-            label_mode = "single"
-            ),
+        # dict(
+        #     name = "CrossEntropyLoss",
+        #     loss_weight = 1.0,
+        #     class_weight = [3.77, 0.77, 0.45, 2.00, 2.00, 0.86, 2.00, 0.59, 1.02, 1.16],
+        #     label_mode = "single"
+        #     ),
         dict(
             name = "FocalLoss",
             loss_weight = 1.0,
-            alpha = 0.25,
+            alpha = [3.77, 0.77, 0.45, 2.00, 2.00, 0.86, 2.00, 0.59, 1.02, 1.16],  # Class-specific weights
             gamma = 2.0,
             reduction = "mean",
             label_mode = "single"
@@ -118,7 +118,7 @@ optimizer = dict(
 lr_config = dict(
     policy = "CosineAnnealingLR",
     warmup = "linear",
-    warmup_iters = 300,
+    warmup_iters = 500,
     warmup_ratio = 0.1,
     min_lr = 1e-6,
 )

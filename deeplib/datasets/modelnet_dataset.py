@@ -6,6 +6,7 @@ from torchvision import transforms
 import open3d as o3d
 from collections import defaultdict
 from .base_dataset import BaseDataset
+import json
 
 class ModelNetDataset(BaseDataset):
     def __init__(self, dataset_cfg, split, transforms=None):
@@ -60,6 +61,11 @@ class ModelNetDataset(BaseDataset):
         for label, count in zip(unique_labels, counts):
             print(f"Class {label} ({self.classes[label]}): {count} samples")
         print()
+
+        # save the class distribution to a json file
+        class_distribution = {self.classes[i]: int(counts[i]) for i in range(len(self.classes))}
+        with open(os.path.join(self.root_dir, f'class_distribution_{self.split}.json'), 'w') as f:
+            json.dump(class_distribution, f, indent=2)
 
     def read_txt(self, file_path):
         with open(file_path, 'r') as f:

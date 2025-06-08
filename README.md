@@ -2,6 +2,50 @@
 
 This project implements a Swin Transformer architecture for 3D point cloud classification, specifically designed for the ModelNet10 dataset. The implementation adapts the Swin Transformer's hierarchical design for 3D point cloud data, leveraging its powerful feature extraction capabilities.
 
+## DeepLib Framework
+
+I built **DeepLib** from scratch, a comprehensive end-to-end deep learning framework built from scratch for computer vision tasks. DeepLib is designed with modularity, extensibility, and ease of use in mind, drawing inspiration from established frameworks such as:
+
+- **Detectron2** (Facebook AI Research)
+- **MMDetection** (OpenMMLab)
+- **MMClassification** (OpenMMLab)
+- **PaddlePaddle** (Baidu)
+
+### Framework Philosophy
+
+DeepLib follows modern deep learning framework design principles:
+- **Modular Architecture**: Separate components for models, datasets, losses, and training logic
+- **Registry System**: Dynamic module registration for easy extensibility
+- **Configuration-Driven**: Flexible configuration system for experiments
+- **Hook-Based Training**: Customizable training pipeline with hooks for logging, checkpointing, and scheduling
+- **Unified Interface**: Consistent APIs across different vision tasks
+
+### Core Components
+
+```
+deeplib/
+├── config/          # Configuration management
+├── core/           # Core utilities (evaluators, hooks)
+├── datasets/       # Dataset implementations and transforms
+├── engine/         # Training and inference engines
+├── models/         # Model architectures, losses, and components
+│   ├── architectures/  # Complete model definitions
+│   ├── backbones/      # Feature extractors
+│   ├── heads/          # Task-specific heads
+│   ├── losses/         # Loss functions
+│   └── necks/          # Feature pyramid networks
+└── utils/          # Utilities and registry system
+```
+
+The framework demonstrates how to build a production-ready deep learning system with:
+- **Flexible Model Construction**: Modular backbone + neck + head architecture
+- **Advanced Loss Functions**: Custom implementations of CrossEntropy, Focal Loss, etc.
+- **Comprehensive Training Pipeline**: Multi-hook system for logging, checkpointing, and scheduling
+- **Experiment Management**: Organized output structure with versioning
+- **Extensible Design**: Easy to add new models, datasets, and tasks
+
+
+
 ## Features
 
 - 3D Swin Transformer architecture for point cloud processing

@@ -90,6 +90,8 @@ class FocalLoss(nn.Module):
             self.loss_fn = FocalLossSingle(alpha=alpha, gamma=gamma)
     
     def forward(self, pred, target):
+        # print(f"pred.shape: {pred.shape}, target.shape: {target.shape}, in focal loss")
+        # print(f"pred: {pred}, target: {target}")
         return self.loss_fn(pred, target)
     
 @LOSS_REGISTRY.register_module()
@@ -112,6 +114,8 @@ class CrossEntropyLoss(nn.Module):
             self.loss_func = nn.CrossEntropyLoss(weight=self.class_weight)
         
     def forward(self, pred, target):
+        # print(f"pred.shape: {pred.shape}, target.shape: {target.shape}, in cross entropy loss")
+        # print(f"pred: {pred}, target: {target}")
         return self.loss_func(pred, target)
 
 # This is wrapper for all loss functions, and also return the total loss

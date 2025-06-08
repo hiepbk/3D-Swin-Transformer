@@ -132,7 +132,7 @@ class Trainer:
             raise ValueError(f"Unsupported lr policy: {lr_config.policy}")
         
         # Build main scheduler based on policy
-        if lr_config.policy == 'MultiStepLR':
+        if lr_config.policy == 'MultiStepLR': 
             main_scheduler = scheduler_class(self.optimizer, milestones=lr_config.step, gamma=lr_config.gamma)
         elif lr_config.policy == 'CosineAnnealingLR':
             # Adjust T_max if warmup is used
