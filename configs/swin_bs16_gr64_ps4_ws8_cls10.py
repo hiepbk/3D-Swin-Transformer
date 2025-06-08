@@ -16,7 +16,7 @@ class_names = ["bathtub",
                "toilet"]
 num_classes = len(class_names)
 
-train_batch_size = 12
+train_batch_size = 16
 val_batch_size = 1
 
 dataset = dict(
