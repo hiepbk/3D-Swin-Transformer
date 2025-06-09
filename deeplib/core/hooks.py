@@ -97,6 +97,8 @@ class LoggerHook(Hook):
             if isinstance(v, (int, float)):
                 self.logger.info(f'{k}: {v:.4f}')
                 self.writer.add_scalar(f'val/{k}', v, trainer.epoch)
+                
+
     
     def after_run(self, trainer):
         self.logger.info('Training completed')

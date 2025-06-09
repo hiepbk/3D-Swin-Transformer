@@ -48,8 +48,8 @@ class_names = [ "airplane",
 num_classes = len(class_names)
 
 # Performance optimizations
-train_batch_size = 32  # Increased from 16 for better GPU utilization
-val_batch_size = 64    # Increased from 1 for faster validation
+train_batch_size = 16  # Reduced from 32 for more stable training
+val_batch_size = 32    # Reduced from 64
 
 dataset = dict(
     name = "build_modelnet_dataset",
@@ -63,12 +63,12 @@ dataset = dict(
     train = dict(
         batch_size = train_batch_size,
         shuffle = True,
-        num_workers = 8,        # Increased from 2 for faster data loading
+        num_workers = 6,        # Reduced from 8 to avoid bottlenecks
         pin_memory = True,
         drop_last = True,
         split = "train",
         persistent_workers = True,  # Keep workers alive between epochs
-        prefetch_factor = 4,        # Prefetch more batches
+        prefetch_factor = 2,        # Reduced from 4
         transforms = [
             dict(type = "MeanGridVoxelize", 
                  grid_size = grid_size, 
@@ -123,98 +123,97 @@ model = dict(
         dropout = 0.1
     ),
     loss = [
-        # dict(
-        #     name = "CrossEntropyLoss",
-        #     loss_weight = 1.0,
-        #     class_weight = [3.77, 0.77, 0.45, 2.00, 2.00, 0.86, 2.00, 0.59, 1.02, 1.16],
-        #     label_mode = "single"
-        #     ),
         dict(
-            name = "FocalLoss",
+            name = "CrossEntropyLoss",
             loss_weight = 1.0,
-            # alpha = [3.77, 0.77, 0.45, 2.00, 2.00, 0.86, 2.00, 0.59, 1.02, 1.16],  # Class-specific weights - removed due to mismatch with 40 classes
-            # To use class-specific weights, provide alpha values for all 40 classes:
-            # alpha = [1.0] * 40,  # or calculate proper weights based on class frequencies
-            # Alpha weights calculated based on class distribution (normalized inverse frequency)
-            alpha = [
-                        0.617,
-                        1.234,
-                        0.617,
-                        3.085,
-                        0.617,
-                        0.617,
-                        3.085,
-                        0.617,
-                        0.617,
-                        3.085,
-                        3.085,
-                        3.085,
-                        0.717,
-                        3.085,
-                        0.717,
-                        3.085,
-                        0.617,
-                        0.617,
-                        3.085,
-                        3.085,
-                        3.085,
-                        0.617,
-                        0.617,
-                        0.717,
-                        3.085,
-                        0.617,
-                        0.617,
-                        3.085,
-                        0.617,
-                        3.085,
-                        0.617,
-                        3.085,
-                        3.085,
-                        0.617,
-                        3.085,
-                        0.617,
-                        0.617,
-                        0.617,
-                        3.085,
-                        3.085
-                        ],
-            gamma = 2.0,
-            reduction = "mean",
+            # Use more balanced class weights
+            class_weight = [1.5, 3.0, 1.5, 2.5, 1.5, 2.0, 4.0, 2.0, 1.0, 2.5, 
+                           4.0, 3.0, 2.0, 3.0, 2.0, 2.5, 2.5, 2.5, 2.5, 3.0,
+                           2.5, 1.5, 1.2, 2.0, 3.5, 1.8, 1.8, 3.0, 2.8, 3.0,
+                           1.0, 3.0, 3.5, 1.5, 2.5, 1.8, 1.8, 1.2, 3.5, 3.0],
             label_mode = "single"
         )
+        # dict(
+        #     name = "FocalLoss",
+        #     loss_weight = 1.0,
+        #     # Alpha weights calculated based on class distribution (normalized inverse frequency)
+        #     alpha = [
+        #                 0.617,
+        #                 1.234,
+        #                 0.617,
+        #                 3.085,
+        #                 0.617,
+        #                 0.617,
+        #                 3.085,
+        #                 0.617,
+        #                 0.617,
+        #                 3.085,
+        #                 3.085,
+        #                 3.085,
+        #                 0.717,
+        #                 3.085,
+        #                 0.717,
+        #                 3.085,
+        #                 0.617,
+        #                 0.617,
+        #                 3.085,
+        #                 3.085,
+        #                 3.085,
+        #                 0.617,
+        #                 0.617,
+        #                 0.717,
+        #                 3.085,
+        #                 0.617,
+        #                 0.617,
+        #                 3.085,
+        #                 0.617,
+        #                 3.085,
+        #                 0.617,
+        #                 3.085,
+        #                 3.085,
+        #                 0.617,
+        #                 3.085,
+        #                 0.617,
+        #                 0.617,
+        #                 0.617,
+        #                 3.085,
+        #                 3.085
+        #                 ],
+        #     gamma = 2.0,
+        #     reduction = "mean",
+        #     label_mode = "single"
+        # )
         ]
 )
 
 optimizer = dict(
     name = "AdamW",
-    # lr = 0.0001,
-    lr = 1e-3,
-    weight_decay = 0.05,
-    num_epochs = 100,
+    lr = 1e-4,              # Reduced from 6e-4 for more stable training
+    weight_decay = 0.01,    # Reduced from 0.05 to prevent over-regularization
+    num_epochs = 100,       # Increased from 40 for better convergence
     seed = 42,
     deterministic = True,
-    early_stopping_patience = 10,
+    early_stopping_patience = 15,  # Increased patience
     early_stopping_delta = 0.001
 )
 
 # Training optimizations
 use_amp = True                    # Enable mixed precision training
 gradient_accumulation_steps = 1   # Accumulate gradients over multiple steps
-compile_model = True              # Use torch.compile for faster training (PyTorch 2.0+)
+compile_model = False             # Disable for debugging, enable later for speed
 
 # Gradient clipping for stability
 grad_clip = dict(
-    max_norm = 1.0,
+    max_norm = 0.5,    # Reduced from 1.0 for more aggressive clipping
     norm_type = 2
 )
 
 lr_config = dict(
     policy = "CosineAnnealingLR",
     warmup = "linear",
-    warmup_iters = 100,
-    warmup_ratio = 0.05,
-    # min_lr = 1e-6,
-    min_lr = 3e-5,
+    warmup_iters = 500,     # Increased from 150 for better warmup
+    warmup_ratio = 0.01,    # Reduced from 0.1 for gentler warmup
+    min_lr = 1e-6,          # Reduced minimum learning rate
 )
 
 load_from = None
