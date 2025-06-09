@@ -107,9 +107,10 @@ model = dict(
 
 optimizer = dict(
     name = "AdamW",
-    lr = 0.0001,
+    # lr = 0.0001,
+    lr = 2e-4,
     weight_decay = 0.05,
-    num_epochs = 30,
+    num_epochs = 40,
     seed = 42,
     deterministic = True,
     early_stopping_patience = 10,
@@ -121,7 +122,8 @@ lr_config = dict(
     warmup = "linear",
     warmup_iters = 200,
     warmup_ratio = 0.1,
-    min_lr = 1e-6,
+    # min_lr = 1e-6,
+    min_lr = 1e-5,
 )
 
 load_from = None

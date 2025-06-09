@@ -4,16 +4,47 @@ patch_size = 4
 window_size = 8
 num_feat = 6
 
-class_names = ["bathtub",
-               "bed",
-               "chair", 
-               "desk",
-               "dresser",
-               "monitor", 
-               "night_stand", 
-               "sofa", 
-               "table", 
-               "toilet"]
+class_names = [ "airplane",
+                "bathtub",
+                "bed",
+                "bench",
+                "bookshelf",
+                "bottle",
+                "bowl",
+                "car",
+                "chair",
+                "cone",
+                "cup",
+                "curtain",
+                "desk",
+                "door",
+                "dresser",
+                "flower_pot",
+                "glass_box",
+                "guitar",
+                "keyboard",
+                "lamp",
+                "laptop",
+                "mantel",
+                "monitor",
+                "night_stand",
+                "person",
+                "piano",
+                "plant",
+                "radio",
+                "range_hood",
+                "sink",
+                "sofa",
+                "stairs",
+                "stool",
+                "table",
+                "tent",
+                "toilet",
+                "tv_stand",
+                "vase",
+                "wardrobe",
+                "xbox",
+                    ]
 num_classes = len(class_names)
 
 train_batch_size = 16
@@ -96,7 +127,52 @@ model = dict(
         dict(
             name = "FocalLoss",
             loss_weight = 1.0,
-            alpha = [3.77, 0.77, 0.45, 2.00, 2.00, 0.86, 2.00, 0.59, 1.02, 1.16],  # Class-specific weights
+            # alpha = [3.77, 0.77, 0.45, 2.00, 2.00, 0.86, 2.00, 0.59, 1.02, 1.16],  # Class-specific weights - removed due to mismatch with 40 classes
+            # To use class-specific weights, provide alpha values for all 40 classes:
+            # alpha = [1.0] * 40,  # or calculate proper weights based on class frequencies
+            # Alpha weights calculated based on class distribution (normalized inverse frequency)
+            alpha = [
+                        0.617,
+                        1.234,
+                        0.617,
+                        3.085,
+                        0.617,
+                        0.617,
+                        3.085,
+                        0.617,
+                        0.617,
+                        3.085,
+                        3.085,
+                        3.085,
+                        0.717,
+                        3.085,
+                        0.717,
+                        3.085,
+                        0.617,
+                        0.617,
+                        3.085,
+                        3.085,
+                        3.085,
+                        0.617,
+                        0.617,
+                        0.717,
+                        3.085,
+                        0.617,
+                        0.617,
+                        3.085,
+                        0.617,
+                        3.085,
+                        0.617,
+                        3.085,
+                        3.085,
+                        0.617,
+                        3.085,
+                        0.617,
+                        0.617,
+                        0.617,
+                        3.085,
+                        3.085
+                        ],
             gamma = 2.0,
             reduction = "mean",
             label_mode = "single"
@@ -106,9 +182,10 @@ model = dict(
 
 optimizer = dict(
     name = "AdamW",
-    lr = 0.0001,
+    # lr = 0.0001,
+    lr = 2e-4,
     weight_decay = 0.05,
-    num_epochs = 30,
+    num_epochs = 40,
     seed = 42,
     deterministic = True,
     early_stopping_patience = 10,
@@ -118,9 +195,10 @@ optimizer = dict(
 lr_config = dict(
     policy = "CosineAnnealingLR",
     warmup = "linear",
-    warmup_iters = 300,
+    warmup_iters = 200,
     warmup_ratio = 0.1,
-    min_lr = 1e-6,
+    # min_lr = 1e-6,
+    min_lr = 1e-5,
 )
 
 load_from = None

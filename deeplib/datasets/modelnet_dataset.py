@@ -36,7 +36,7 @@ class ModelNetDataset(BaseDataset):
             raise ValueError(f"Number of classes in file ({len(self.classes)}) doesn't match num_classes ({self.num_classes})")
         
         # # Validate labels
-        # self._validate_labels()
+        self._validate_labels()
 
     def get_annotations(self):
         # Load split data
@@ -62,10 +62,68 @@ class ModelNetDataset(BaseDataset):
             print(f"Class {label} ({self.classes[label]}): {count} samples")
         print()
 
-        # save the class distribution to a json file
+        # Create class distribution dictionary
         class_distribution = {self.classes[i]: int(counts[i]) for i in range(len(self.classes))}
-        with open(os.path.join(self.root_dir, f'class_distribution_{self.split}.json'), 'w') as f:
-            json.dump(class_distribution, f, indent=2)
+        
+        # Calculate alpha weights based on class distribution
+        total_samples = sum(counts)
+        
+        # Method 1: Normalized inverse frequency (recommended for focal loss)
+        alpha_weights_norm = []
+        for i in range(len(self.classes)):
+            freq = counts[i] if i < len(counts) else 1  # Handle missing classes
+            weight = total_samples / (len(self.classes) * freq)
+            alpha_weights_norm.append(round(weight, 3))
+        
+        # Method 2: Simple inverse frequency
+        alpha_weights_simple = []
+        for i in range(len(self.classes)):
+            freq = counts[i] if i < len(counts) else 1
+            weight = total_samples / freq
+            alpha_weights_simple.append(round(weight, 3))
+        
+        # Method 3: Square root inverse frequency (gentler weighting)
+        alpha_weights_sqrt = []
+        for i in range(len(self.classes)):
+            freq = counts[i] if i < len(counts) else 1
+            weight = np.sqrt(total_samples / freq)
+            alpha_weights_sqrt.append(round(weight, 3))
+        
+        # Print alpha weights information
+        print(f"Alpha weights calculated for {len(self.classes)} classes:")
+        print(f"Total samples: {total_samples}")
+        print(f"Min frequency: {min(counts)} samples")
+        print(f"Max frequency: {max(counts)} samples")
+        print()
+        
+        # Save comprehensive information to JSON file
+        output_data = {
+            "split": self.split,
+            "num_classes": len(self.classes),
+            "total_samples": int(total_samples),
+            "class_names": self.classes,
+            "class_distribution": class_distribution,
+            "alpha_weights": {
+                "normalized_inverse_frequency": alpha_weights_norm,
+                "simple_inverse_frequency": alpha_weights_simple,
+                "sqrt_inverse_frequency": alpha_weights_sqrt
+            },
+            "alpha_weights_info": {
+                "recommended": "normalized_inverse_frequency",
+                "description": {
+                    "normalized_inverse_frequency": "Balanced weighting, good for focal loss",
+                    "simple_inverse_frequency": "Strong weighting for rare classes",
+                    "sqrt_inverse_frequency": "Gentle weighting, less aggressive"
+                }
+            }
+        }
+        
+        with open(os.path.join(self.root_dir, f'{self.num_classes}_class_distribution_{self.split}.json'), 'w') as f:
+            json.dump(output_data, f, indent=2)
+        
+        print(f"Class distribution and alpha weights saved to: {self.num_classes}_class_distribution_{self.split}.json")
+        print(f"Recommended alpha weights (normalized_inverse_frequency): {alpha_weights_norm}")
+        print()
 
     def read_txt(self, file_path):
         with open(file_path, 'r') as f:
