@@ -104,7 +104,9 @@ python setup.py develop
 
 The project uses the ModelNet10 dataset, which contains 10 categories of 3D CAD models. You can download the dataset from the following link:
 
-[Download ModelNet10 Dataset](https://shapenet.cs.stanford.edu/media/modelnet10.zip)
+[Download ModelNet10 Dataset](https://www.kaggle.com/datasets/chenxaoyu/modelnet-normal-resampled?resource=download)
+
+From Kaggle with resampled to shape 10,000 points
 
 After downloading:
 1. Extract the zip file
