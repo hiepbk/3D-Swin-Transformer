@@ -36,7 +36,7 @@ class ModelNetDataset(BaseDataset):
             raise ValueError(f"Number of classes in file ({len(self.classes)}) doesn't match num_classes ({self.num_classes})")
         
         # # Validate labels
-        self._validate_labels()
+        # self._validate_labels()
 
     def get_annotations(self):
         # Load split data

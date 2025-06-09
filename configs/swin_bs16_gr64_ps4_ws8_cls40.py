@@ -47,8 +47,9 @@ class_names = [ "airplane",
                     ]
 num_classes = len(class_names)
 
-train_batch_size = 16
-val_batch_size = 1
+# Performance optimizations
+train_batch_size = 32  # Increased from 16 for better GPU utilization
+val_batch_size = 64    # Increased from 1 for faster validation
 
 dataset = dict(
     name = "build_modelnet_dataset",
@@ -62,10 +63,12 @@ dataset = dict(
     train = dict(
         batch_size = train_batch_size,
         shuffle = True,
-        num_workers = 2,
+        num_workers = 8,        # Increased from 2 for faster data loading
         pin_memory = True,
         drop_last = True,
         split = "train",
+        persistent_workers = True,  # Keep workers alive between epochs
+        prefetch_factor = 4,        # Prefetch more batches
         transforms = [
             dict(type = "MeanGridVoxelize", 
                  grid_size = grid_size, 
@@ -76,10 +79,12 @@ dataset = dict(
     val = dict(
         batch_size = val_batch_size,
         shuffle = False,
-        num_workers = 2,
+        num_workers = 4,        # Increased from 2
         pin_memory = True,
-        drop_last = True,
+        drop_last = False,      # Don't drop last for validation
         split = "test",
+        persistent_workers = True,
+        prefetch_factor = 2,
         transforms = [
             dict(type = "MeanGridVoxelize", 
                  grid_size = grid_size, 
@@ -190,6 +195,17 @@ optimizer = dict(
     deterministic = True,
     early_stopping_patience = 10,
     early_stopping_delta = 0.001
+)
+
+# Training optimizations
+use_amp = True                    # Enable mixed precision training
+gradient_accumulation_steps = 1   # Accumulate gradients over multiple steps
+compile_model = True              # Use torch.compile for faster training (PyTorch 2.0+)
+
+# Gradient clipping for stability
+grad_clip = dict(
+    max_norm = 1.0,
+    norm_type = 2
 )
 
 lr_config = dict(

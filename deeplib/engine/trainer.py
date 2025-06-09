@@ -2,6 +2,7 @@ import os
 import time
 import torch
 from torch.nn.utils import clip_grad_norm_
+from torch.cuda.amp import GradScaler, autocast
 import logging
 from tqdm import tqdm
 from deeplib.models import build_architecture
@@ -25,6 +26,16 @@ class Trainer:
     def __init__(self, cfg):
         self.cfg = cfg
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        # Initialize mixed precision scaler for faster training
+        self.use_amp = getattr(cfg, 'use_amp', True)  # Enable by default if CUDA available
+        if self.use_amp and torch.cuda.is_available():
+            self.scaler = GradScaler()
+            print("Mixed precision training enabled")
+        else:
+            self.scaler = None
+            print("Mixed precision training disabled")
+            
         # Initialize hooks
         self.hooks = self._build_hooks()
 
@@ -61,18 +72,34 @@ class Trainer:
         train_collate_fn = getattr(train_set, 'collate_fn', None)
         val_collate_fn = getattr(val_set, 'collate_fn', None)
         
-        train_loader = DataLoader(train_set, 
-                              batch_size=self.cfg.dataset.train.batch_size, 
-                              shuffle=self.cfg.dataset.train.shuffle, 
-                              num_workers=self.cfg.dataset.train.num_workers, 
-                              pin_memory=self.cfg.dataset.train.pin_memory,
-                              collate_fn=train_collate_fn)
-        val_loader = DataLoader(val_set, 
-                            batch_size=self.cfg.dataset.val.batch_size, 
-                            shuffle=self.cfg.dataset.val.shuffle, 
-                            num_workers=self.cfg.dataset.val.num_workers, 
-                            pin_memory=self.cfg.dataset.val.pin_memory,
-                            collate_fn=val_collate_fn)
+        # Get optimization parameters from config
+        train_cfg = self.cfg.dataset.train
+        val_cfg = self.cfg.dataset.val
+        
+        train_loader = DataLoader(
+            train_set, 
+            batch_size=train_cfg.batch_size, 
+            shuffle=train_cfg.shuffle, 
+            num_workers=train_cfg.num_workers, 
+            pin_memory=train_cfg.pin_memory,
+            drop_last=train_cfg.drop_last,
+            collate_fn=train_collate_fn,
+            persistent_workers=getattr(train_cfg, 'persistent_workers', False),
+            prefetch_factor=getattr(train_cfg, 'prefetch_factor', 2)
+        )
+        
+        val_loader = DataLoader(
+            val_set, 
+            batch_size=val_cfg.batch_size, 
+            shuffle=val_cfg.shuffle, 
+            num_workers=val_cfg.num_workers, 
+            pin_memory=val_cfg.pin_memory,
+            drop_last=val_cfg.drop_last,
+            collate_fn=val_collate_fn,
+            persistent_workers=getattr(val_cfg, 'persistent_workers', False),
+            prefetch_factor=getattr(val_cfg, 'prefetch_factor', 2)
+        )
+        
         data_loaders = {'train': train_loader, 'val': val_loader}
 
         self.logger.info(f'Train set: {len(train_set)}')
@@ -90,6 +117,18 @@ class Trainer:
         """Build model from config."""
         model = build_architecture(self.cfg)
         model.to(self.device)
+        
+        # Compile model for faster training (PyTorch 2.0+)
+        if getattr(self.cfg, 'compile_model', False):
+            try:
+                if hasattr(torch, 'compile'):
+                    model = torch.compile(model, mode='max-autotune')
+                    print("Model compiled with torch.compile for faster training")
+                else:
+                    print("torch.compile not available, skipping model compilation")
+            except Exception as e:
+                print(f"Model compilation failed: {e}, continuing without compilation")
+        
         return model
     
     def _build_optimizer(self):
@@ -214,18 +253,36 @@ class Trainer:
         train_loader = self.data_loaders['train']
         
         for batch_data in train_loader:
-            # Forward pass
+            # Forward pass with mixed precision
             self.optimizer.zero_grad()
-            # loss is now a dict of loss components from ClassifyLoss
-            losses = self.model(batch_data, istrain=True)
             
-            # Extract the total loss tensor for backpropagation
-            losses.get('Loss').backward()
-            
-            if hasattr(self.cfg, 'grad_clip'):
-                clip_grad_norm_(self.model.parameters(), **self.cfg.grad_clip)
-            
-            self.optimizer.step()
+            if self.use_amp and self.scaler is not None:
+                # Mixed precision forward pass
+                with autocast():
+                    losses = self.model(batch_data, istrain=True)
+                
+                # Scale loss and backward pass
+                self.scaler.scale(losses.get('Loss')).backward()
+                
+                # Gradient clipping with scaler
+                if hasattr(self.cfg, 'grad_clip'):
+                    self.scaler.unscale_(self.optimizer)
+                    grad_clip_kwargs = self.cfg.grad_clip.to_dict()
+                    clip_grad_norm_(self.model.parameters(), **grad_clip_kwargs)
+                
+                # Optimizer step with scaler
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+            else:
+                # Standard precision training
+                losses = self.model(batch_data, istrain=True)
+                losses.get('Loss').backward()
+                
+                if hasattr(self.cfg, 'grad_clip'):
+                    grad_clip_kwargs = self.cfg.grad_clip.to_dict()
+                    clip_grad_norm_(self.model.parameters(), **grad_clip_kwargs)
+                
+                self.optimizer.step()
             
             # Update metrics - convert tensor values to floats for logging
             batch_metrics = {}

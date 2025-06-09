@@ -144,23 +144,36 @@ class CheckpointHook(Hook):
 
 @HOOK_REGISTRY.register_module()
 class LRSchedulerHook(Hook):
-    def after_train_iter(self, trainer, **kwargs):
-        # Step scheduler after each iteration if using warmup or OneCycleLR
+    def __init__(self):
+        super().__init__()
+        self.step_on_iter = False
+        self.step_on_epoch = False
+    
+    def before_run(self, trainer):
+        # Determine when to step based on scheduler type
         if trainer.lr_scheduler is not None:
             scheduler_name = trainer.lr_scheduler.__class__.__name__
             if scheduler_name in ['SequentialLR', 'OneCycleLR']:
-                trainer.lr_scheduler.step()
+                self.step_on_iter = True
+                self.step_on_epoch = False
+            else:
+                self.step_on_iter = False
+                self.step_on_epoch = True
+    
+    def after_train_iter(self, trainer, **kwargs):
+        # Step scheduler after each iteration for specific schedulers
+        if self.step_on_iter and trainer.lr_scheduler is not None:
+            trainer.lr_scheduler.step()
     
     def after_train_epoch(self, trainer, **kwargs):
-        # Step scheduler after each epoch for other schedulers
-        if trainer.lr_scheduler is not None:
-            scheduler_name = trainer.lr_scheduler.__class__.__name__
-            if scheduler_name not in ['SequentialLR', 'OneCycleLR']:
-                trainer.lr_scheduler.step()
+        # Step scheduler after each epoch for most schedulers
+        if self.step_on_epoch and trainer.lr_scheduler is not None:
+            trainer.lr_scheduler.step()
 
 @HOOK_REGISTRY.register_module()
 class OptimizerHook(Hook):
     def after_train_iter(self, trainer, **kwargs):
-        if hasattr(trainer.cfg, 'grad_clip'):
-            clip_grad_norm_(trainer.model.parameters(), **trainer.cfg.grad_clip)
+        # Gradient clipping is already handled in the trainer's training loop
+        # No additional operations needed here for now
+        pass
 

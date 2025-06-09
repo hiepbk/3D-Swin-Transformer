@@ -53,6 +53,10 @@ class Config:
     def __repr__(self):
         return str({k: v for k, v in self.module.__dict__.items() if not k.startswith('_')})
     
+    def to_dict(self):
+        """Convert Config object to dictionary for unpacking or other uses."""
+        return {k: v for k, v in self.module.__dict__.items() if not k.startswith('_')}
+    
     def merge_from_args(self, args):
         """
         Merge config from either:
