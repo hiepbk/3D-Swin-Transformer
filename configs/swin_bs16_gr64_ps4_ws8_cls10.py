@@ -21,7 +21,7 @@ val_batch_size = 1
 
 dataset = dict(
     name = "build_modelnet_dataset",
-    data_root = "data",
+    data_root = "data/modelnet",
     num_classes = num_classes,
     class_names = class_names,
     num_feat = num_feat,
