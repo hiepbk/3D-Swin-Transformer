@@ -188,9 +188,9 @@ model = dict(
 optimizer = dict(
     name = "AdamW",
     # lr = 0.0001,
-    lr = 2e-4,
+    lr = 1e-3,
     weight_decay = 0.05,
-    num_epochs = 40,
+    num_epochs = 100,
     seed = 42,
     deterministic = True,
     early_stopping_patience = 10,
@@ -211,10 +211,10 @@ grad_clip = dict(
 lr_config = dict(
     policy = "CosineAnnealingLR",
     warmup = "linear",
-    warmup_iters = 200,
-    warmup_ratio = 0.1,
+    warmup_iters = 100,
+    warmup_ratio = 0.05,
     # min_lr = 1e-6,
-    min_lr = 1e-5,
+    min_lr = 3e-5,
 )
 
 load_from = None

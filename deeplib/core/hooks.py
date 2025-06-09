@@ -163,12 +163,12 @@ class LRSchedulerHook(Hook):
     def after_train_iter(self, trainer, **kwargs):
         # Step scheduler after each iteration for specific schedulers
         if self.step_on_iter and trainer.lr_scheduler is not None:
-            trainer.lr_scheduler.step()
+                trainer.lr_scheduler.step()
     
     def after_train_epoch(self, trainer, **kwargs):
         # Step scheduler after each epoch for most schedulers
         if self.step_on_epoch and trainer.lr_scheduler is not None:
-            trainer.lr_scheduler.step()
+                trainer.lr_scheduler.step()
 
 @HOOK_REGISTRY.register_module()
 class OptimizerHook(Hook):
